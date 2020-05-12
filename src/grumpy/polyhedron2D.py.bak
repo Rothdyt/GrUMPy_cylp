@@ -231,14 +231,14 @@ class Figure:
         if self.fig is None:
             self.initialize()
         if xlim == None or ylim == None:
-            print('Must have plot_max and plot_min set in order to add line')
+            print 'Must have plot_max and plot_min set in order to add line'
             return
         x_intercept = None
         y_intercept = None
         x = []
         y = []
         if coeffs[0] == 0 and coeffs[1] == 0:
-            print('Trying to plot line with zero coefficients...')
+            print 'Trying to plot line with zero coefficients...'
             return
         if coeffs[0] == 0:
             x = [xlim[0], xlim[1]]
