@@ -1,10 +1,25 @@
+from __future__ import division
+from __future__ import print_function
+from builtins import range
+from builtins import object
+from past.utils import old_div
 import numpy as np
-from polyhedron import Vrep, Hrep
-import matplotlib.pyplot as plt
-import matplotlib.lines as lines
+from pypolyhedron.polyhedron import Vrep, Hrep
 from math import ceil, floor
 
-class Polyhedron2D:
+try:
+    import matplotlib.pyplot as plt
+    import matplotlib.lines as lines
+    MATPLOTLIB_INSTALLED = True
+except:
+    MATPLOTLIB_INSTALLED = False
+
+closed = False
+
+def handle_close(evt):
+    print('Figure closed. Exiting!')
+
+class Polyhedron2D(object):
     def __init__(self, points = None, rays = None, A = None, b = None):
         have_rep = False
         if points is not None or rays is not None:
@@ -66,15 +81,15 @@ class Polyhedron2D:
                     self.hrep.adj[self.ray_indices[0]][1]]
                 next_point = self.hrep.adj[self.ray_indices[0]][1]
             if ray[0] < 0:
-                x_lim = (vertex[0] - self.min_point[0])/-float(ray[0])
+                x_lim = old_div((vertex[0] - self.min_point[0]),-float(ray[0]))
             elif ray[0] > 0:
-                x_lim = (self.max_point[0] - vertex[0])/-float(ray[0])
+                x_lim = old_div((self.max_point[0] - vertex[0]),-float(ray[0]))
             else:
                 x_lim = 10000
             if ray[1] < 0:
-                y_lim = (vertex[1] - self.min_point[1])/-float(ray[1])
+                y_lim = old_div((vertex[1] - self.min_point[1]),-float(ray[1]))
             elif ray[1] > 0:
-                y_lim = (self.max_point[1] - vertex[1])/-float(ray[1]) 
+                y_lim = old_div((self.max_point[1] - vertex[1]),-float(ray[1])) 
             else:
                 y_lim = 10000
             lim = min(x_lim, y_lim) + 1
@@ -92,15 +107,15 @@ class Polyhedron2D:
                 ray = self.hrep.generators[current_point]
                 vertex = self.hrep.generators[prev_point]
                 if ray[0] < 0:
-                    x_lim = (vertex[0] - self.min_point[0])/-float(ray[0])
+                    x_lim = old_div((vertex[0] - self.min_point[0]),-float(ray[0]))
                 elif ray[0] > 0:
-                    x_lim = (self.max_point[0] - vertex[0])/float(ray[0])
+                    x_lim = old_div((self.max_point[0] - vertex[0]),float(ray[0]))
                 else:
                     x_lim = 10000
                 if ray[1] < 0:
-                    y_lim = (vertex[1] - self.min_point[1])/-float(ray[1])
+                    y_lim = old_div((vertex[1] - self.min_point[1]),-float(ray[1]))
                 elif ray[1] > 0:
-                    y_lim = (self.max_point[1] - vertex[1])/float(ray[1])
+                    y_lim = old_div((self.max_point[1] - vertex[1]),float(ray[1]))
                 else:
                     y_lim = 10000 
                 lim = min(x_lim, y_lim) + 1
@@ -117,21 +132,26 @@ class Polyhedron2D:
         self.xlim = np.array(np.floor([self.xlim[i] + padding[i] for i in [0,1]]))
         self.ylim = np.array(np.floor([self.ylim[i] + padding[i] for i in [0,1]]))
 
-class Figure:
+class Figure(object):
 
     def __init__(self):
         self.fig = None
+        self.ax = None
+        if MATPLOTLIB_INSTALLED == False:
+            raise Exception('Matplotlib not installed, figures cannot be created')
 
     def initialize(self):
-        self.fig = plt.figure()
-        self.ax = self.fig.add_subplot(111)
-        self.ax.grid()
+        if self.fig == None:
+            self.fig = plt.figure()
+            self.fig.canvas.mpl_connect('close_event', handle_close)
+        if self.ax == None:
+            self.ax = self.fig.add_subplot(111)
+            self.ax.grid()
 
     def add_polyhedron(self, p, color = 'blue', linestyle = 'solid', label = None,
                        show_int_points = False):
-        if self.fig is None:
-            self.initialize()
-        if p.xlim == None or p.ylim == None:
+        self.initialize()
+        if p.xlim is None or p.ylim is None:
             p.determine_plot_size()
         x, y = [], []
         if len(p.ray_indices) > 0:
@@ -146,15 +166,15 @@ class Figure:
                     p.hrep.adj[p.ray_indices[0]][1]]
                 next_point = p.hrep.adj[p.ray_indices[0]][1]
             if ray[0] < 0:
-                x_lim = (vertex[0] - p.xlim[0])/-float(ray[0])
+                x_lim = old_div((vertex[0] - p.xlim[0]),-float(ray[0]))
             elif ray[0] > 0:
-                x_lim = (p.xlim[1] - vertex[0])/float(ray[0])
+                x_lim = old_div((p.xlim[1] - vertex[0]),float(ray[0]))
             else:
                 x_lim = 10000
             if ray[1] < 0:
-                y_lim = (vertex[1] - p.ylim[0])/-float(ray[1])
+                y_lim = old_div((vertex[1] - p.ylim[0]),-float(ray[1]))
             elif ray[1] > 0:
-                y_lim = (p.ylim[1] - vertex[1])/float(ray[1]) 
+                y_lim = old_div((p.ylim[1] - vertex[1]),float(ray[1])) 
             else:
                 y_lim = 10000
             lim = min(x_lim, y_lim)*0.95
@@ -174,15 +194,15 @@ class Figure:
                 ray = p.hrep.generators[current_point]
                 vertex = p.hrep.generators[prev_point]
                 if ray[0] < 0:
-                    x_lim = (vertex[0] - p.xlim[0])/-float(ray[0])
+                    x_lim = old_div((vertex[0] - p.xlim[0]),-float(ray[0]))
                 elif ray[0] > 0:
-                    x_lim = (p.xlim[1] - vertex[0])/float(ray[0])
+                    x_lim = old_div((p.xlim[1] - vertex[0]),float(ray[0]))
                 else:
                     x_lim = 10000
                 if ray[1] < 0:
-                    y_lim = (vertex[1] - p.ylim[0])/-float(ray[1])
+                    y_lim = old_div((vertex[1] - p.ylim[0]),-float(ray[1]))
                 elif ray[1] > 0:
-                    y_lim = (p.ylim[1] - vertex[1])/float(ray[1])
+                    y_lim = old_div((p.ylim[1] - vertex[1]),float(ray[1]))
                 else:
                     y_lim = 10000 
                 lim = min(x_lim, y_lim)*0.95
@@ -228,9 +248,8 @@ class Figure:
         
     def add_line(self, coeffs, level, xlim = None, ylim = None, 
                  color = 'blue', linestyle = 'solid', label = None):
-        if self.fig is None:
-            self.initialize()
-        if xlim == None or ylim == None:
+        self.initialize()
+        if xlim is None or ylim is None:
             print('Must have plot_max and plot_min set in order to add line')
             return
         x_intercept = None
@@ -242,52 +261,52 @@ class Figure:
             return
         if coeffs[0] == 0:
             x = [xlim[0], xlim[1]]
-            y = [level/coeffs[1], level/coeffs[1]]
+            y = [old_div(level,coeffs[1]), old_div(level,coeffs[1])]
         else:
-            x_intercept = [float(level - ylim[0]*coeffs[1])/coeffs[0],
-                           float(level - ylim[1]*coeffs[1])/coeffs[0]]
+            x_intercept = [old_div(float(level - ylim[0]*coeffs[1]),coeffs[0]),
+                           old_div(float(level - ylim[1]*coeffs[1]),coeffs[0])]
         if coeffs[1] == 0:
-            x = [level/coeffs[0], level/coeffs[0]]
+            x = [old_div(level,coeffs[0]), old_div(level,coeffs[0])]
             y = [ylim[0], ylim[1]]
         else:
-            y_intercept = [float(level - xlim[0]*coeffs[0])/coeffs[1],
-                           float(level - xlim[1]*coeffs[0])/coeffs[1]]
+            y_intercept = [old_div(float(level - xlim[0]*coeffs[0]),coeffs[1]),
+                           old_div(float(level - xlim[1]*coeffs[0]),coeffs[1])]
         
         if x_intercept is not None and y_intercept is not None:
-            if coeffs[0]/coeffs[1] < 0:
+            if old_div(coeffs[0],coeffs[1]) < 0:
                 if y_intercept[1] > ylim[1]:
                     y.append(ylim[1])
-                    x.append(float(level - ylim[1]*coeffs[1])/coeffs[0])
+                    x.append(old_div(float(level - ylim[1]*coeffs[1]),coeffs[0]))
                 elif y_intercept[1] < ylim[0]:
                     return
                 else:
                     x.append(xlim[1])
-                    y.append(float(level - xlim[1]*coeffs[0])/coeffs[1])
+                    y.append(old_div(float(level - xlim[1]*coeffs[0]),coeffs[1]))
                 if y_intercept[0] < ylim[0]:
                     y.append(ylim[0])
-                    x.append(float(level - ylim[0]*coeffs[1])/coeffs[0])
+                    x.append(old_div(float(level - ylim[0]*coeffs[1]),coeffs[0]))
                 elif y_intercept[0] > ylim[1]:
                     return
                 else:
                     x.append(xlim[0])
-                    y.append(float(level - xlim[0]*coeffs[0])/coeffs[1])
+                    y.append(old_div(float(level - xlim[0]*coeffs[0]),coeffs[1]))
             else:
                 if y_intercept[1] < ylim[0]:
                     y.append(ylim[0])
-                    x.append(float(level - ylim[0]*coeffs[1])/coeffs[0])
+                    x.append(old_div(float(level - ylim[0]*coeffs[1]),coeffs[0]))
                 elif y_intercept[1] > ylim[1]:
                     return
                 else:
                     x.append(xlim[1])
-                    y.append(float(level - xlim[1]*coeffs[0])/coeffs[1])
+                    y.append(old_div(float(level - xlim[1]*coeffs[0]),coeffs[1]))
                 if y_intercept[1] > ylim[1]:
                     y.append(ylim[1])
-                    x.append(float(level - ylim[1]*coeffs[1])/coeffs[0])
+                    x.append(old_div(float(level - ylim[1]*coeffs[1]),coeffs[0]))
                 elif y_intercept[0] < ylim[0]:
                     return
                 else:
                     x.append(xlim[0])
-                    y.append(float(level - xlim[0]*coeffs[0])/coeffs[1])
+                    y.append(old_div(float(level - xlim[0]*coeffs[0]),coeffs[1]))
     
         if linestyle == 'dashed':
             linestyle = '--'
@@ -298,8 +317,7 @@ class Figure:
         self.ax.add_line(line)
     
     def add_point(self, center, radius = .02, color = 'red', ):
-        if self.fig is None:
-            self.initialize()
+        self.initialize()
         self.ax.add_patch(plt.Circle(center, radius = radius, color = color))
     
     def add_text(self, loc, text):
@@ -311,10 +329,25 @@ class Figure:
     def set_ylim(self, ylim):
         self.ax.set_ylim(ylim)
 
-    def show(self):
+    def show(self, pause = True, wait_for_click = True, filename = None):
         plt.legend()
-        plt.show()
-        self.fig = None
+        if filename is not None:
+            plt.savefig(filename, bbox_inches='tight')
+        else:
+            if wait_for_click == True:
+                plt.draw()
+                try:
+                    if plt.waitforbuttonpress(timeout = 10000):
+                        plt.close()
+                        exit()
+                except:
+                    exit()
+                plt.clf()
+                self.ax = None
+            else:
+                plt.show(block=pause)
+                self.fig = None
+                self.ax = None
 
 if __name__ == '__main__':
     #points = np.random.random ((20,2))

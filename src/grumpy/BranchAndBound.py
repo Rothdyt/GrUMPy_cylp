@@ -1,3 +1,9 @@
+from __future__ import division
+from __future__ import print_function
+from __future__ import absolute_import
+from builtins import str
+from builtins import range
+from past.utils import old_div
 __author__ = 'Ted Ralphs'
 __maintainer__ = 'Ted Ralphs (ted@lehigh.edu)'
 
@@ -151,7 +157,7 @@ def BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
                 prob += LpConstraint(lpSum(var[branch_var]) <= rhs)
             print(branch_var, end=' ')
             pred = parent
-            while str(pred) is not '0':
+            while not str(pred) == '0':
                 pred_branch_var = T.get_node_attr(pred, 'branch_var')
                 pred_rhs = T.get_node_attr(pred, 'rhs')
                 pred_sense = T.get_node_attr(pred, 'sense')
@@ -183,15 +189,15 @@ def BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
             if branch_var != None:
                 if sense == '<=':
                     pseudo_d[branch_var] = (
-                    (pseudo_d[branch_var][0]*pseudo_d[branch_var][1] +
-                    (T.get_node_attr(parent, 'obj') - relax)/
-                    (branch_var_value - rhs))/(pseudo_d[branch_var][1]+1),
+                    old_div((pseudo_d[branch_var][0]*pseudo_d[branch_var][1] +
+                    old_div((T.get_node_attr(parent, 'obj') - relax),
+                    (branch_var_value - rhs))),(pseudo_d[branch_var][1]+1)),
                     pseudo_d[branch_var][1]+1)
                 else:
                     pseudo_u[branch_var] = (
-                    (pseudo_u[branch_var][0]*pseudo_d[branch_var][1] +
-                     (T.get_node_attr(parent, 'obj') - relax)/
-                     (rhs - branch_var_value))/(pseudo_u[branch_var][1]+1),
+                    old_div((pseudo_u[branch_var][0]*pseudo_d[branch_var][1] +
+                     old_div((T.get_node_attr(parent, 'obj') - relax),
+                     (rhs - branch_var_value))),(pseudo_u[branch_var][1]+1)),
                     pseudo_u[branch_var][1]+1)
             var_values = dict([(i, var[i].varValue) for i in VARIABLES])
             integer_solution = 1
@@ -335,7 +341,7 @@ def BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
         if BBstatus == 'C':
             # Branching:
             # Choose a variable for branching
-            branching_var = -1
+            branching_var = None
             if branch_strategy == FIXED_BRANCHING:
                 #fixed order
                 for i in VARIABLES:
@@ -368,7 +374,7 @@ def BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
             else:
                 print("Unknown branching strategy %s" %branch_strategy)
                 exit()
-            if branching_var >= 0:
+            if branching_var is not None:
                 print("Branching on variable %s" %branching_var)
             #Create new nodes
             if search_strategy == DEPTH_FIRST:
