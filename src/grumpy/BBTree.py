@@ -57,22 +57,25 @@ import math
 import random
 import re
 import subprocess
-import sys, os
+import sys
+import os
 from subprocess import Popen, PIPE, STDOUT
 import optparse
 try:
     from src.gimpy import BinaryTree, XDOT_INSTALLED, PYGAME_INSTALLED, DOT2TEX_INSTALLED
     from src.gimpy import PIL_INSTALLED, ETREE_INSTALLED
     from src.gimpy import quote_if_necessary as quote
+    from .forecasting import ForecastingChainedSequences
 except ImportError:
     from coinor.gimpy import BinaryTree, XDOT_INSTALLED, PYGAME_INSTALLED, DOT2TEX_INSTALLED
     from coinor.gimpy import PIL_INSTALLED, ETREE_INSTALLED
     from coinor.gimpy import quote_if_necessary as quote
+    from forecasting import ForecastingChainedSequences
 from io import StringIO
 #from pygame.transform import scale
 from pulp import LpVariable, lpSum, LpProblem, LpMaximize, LpConstraint
 from pulp import LpStatus, value
-from .forecasting import ForecastingChainedSequences
+
 
 if PYGAME_INSTALLED:
     import pygame
@@ -140,6 +143,7 @@ DOT2TEX_TEMPLATE = r'''
 <<endfigonlysection>>
 '''
 
+
 class BBTree(BinaryTree):
     """
     Methods to process and visualize information about a b&b tree. It can
@@ -153,6 +157,7 @@ class BBTree(BinaryTree):
     This is the main class of GrUMPy. It inherits BinaryTree from GIMPy and
     keeps the entire branch-and-bound tree in self.
     """
+
     def __init__(self, **attrs):
         BinaryTree.__init__(self, **attrs)
         # User-controlled constant values
@@ -209,7 +214,7 @@ class BBTree(BinaryTree):
                 self.display()
         input_file.close()
 
-    def write_as_dynamic_gexf(self, filename, mode = "Dot"):
+    def write_as_dynamic_gexf(self, filename, mode="Dot"):
         if not GEXF_INSTALLED:
             print('Gexf not installed. Exiting.')
             return
@@ -277,9 +282,9 @@ class BBTree(BinaryTree):
         elif mode is 'matplotlib':
             self.attr['display'] = 'matplotlib'
         else:
-            raise Exception('%s is not a valid display mode.' %mode)
+            raise Exception('%s is not a valid display mode.' % mode)
 
-    def display(self, item = 'all', basename = 'graph', format='png', count=None,
+    def display(self, item='all', basename='graph', format='png', count=None,
                 pause=False, wait_for_click=True):
         '''
         Displays/Saves images requested. BranchAndBound method calls this method
@@ -295,34 +300,34 @@ class BBTree(BinaryTree):
                     if 'init_log_cond' in n.attr:
                         log_begin = n.attr['init_log_cond']
                         log_end = n.attr['final_log_cond']
-                        normalized_cond = (1-old_div(log_begin,max_log_cond))
-                        color = str(hex(int(normalized_cond*256))[2:]) if normalized_cond >= .0625 else '0' + str(hex(int(normalized_cond*256))[2:])
+                        normalized_cond = (1 - old_div(log_begin, max_log_cond))
+                        color = str(hex(int(normalized_cond * 256))[2:]) if normalized_cond >= .0625 else '0' + str(hex(int(normalized_cond * 256))[2:])
                         n.attr['label'] = '%.0f \n %.0f' % (log_begin, log_end)
-                        n.attr['color'] = '#' + color*3
-                        n.attr['fillcolor'] = '#' + color*3
+                        n.attr['color'] = '#' + color * 3
+                        n.attr['fillcolor'] = '#' + color * 3
                         n.attr['style'] = 'filled'
                     else:
                         n.attr['label'] = ' '
-            BinaryTree.display(self, pause = pause, wait_for_click = wait_for_click)
+            BinaryTree.display(self, pause=pause, wait_for_click=wait_for_click)
             return
         if self.attr['display'] is 'off':
             return
         if self.attr['display'] is 'pygame':
             gnuplot_image = None
-            if item=='all':
+            if item == 'all':
                 self.display_all()
-            elif item=='tree':
+            elif item == 'tree':
                 gnuplot_image = self.GenerateTreeImage()
-            elif item=='scatterplot':
+            elif item == 'scatterplot':
                 gnuplot_image = self.GenerateScatterplot()
-            elif item=='histogram':
+            elif item == 'histogram':
                 gnuplot_image = self.GenerateHistogram()
-            elif item=='incumbent':
+            elif item == 'incumbent':
                 gnuplot_image = self.GenerateIncumbentPath()
-            elif item=='forecast':
+            elif item == 'forecast':
                 gnuplot_image = self.GenerateForecastImages()
             else:
-                raise Exception('Unknown display() method argument %s' %item)
+                raise Exception('Unknown display() method argument %s' % item)
             if gnuplot_image is not None:
                 self.display_image(gnuplot_image)
             # clean auxilary files.
@@ -357,14 +362,14 @@ class BBTree(BinaryTree):
             if self.attr['layout'] is 'dot2tex':
                 if DOT2TEX_INSTALLED:
                     if format != 'pdf' or format != 'ps':
-                        print("Dot2tex only supports pdf and ps formats,"+\
-                            "falling back to pdf")
+                        print("Dot2tex only supports pdf and ps formats," +
+                              "falling back to pdf")
                         format = 'pdf'
                     self.set_layout('dot')
                     tex = dot2tex.dot2tex(self.to_string(), autosize=True,
-                                          texmode = 'math',
-                                          template = DOT2TEX_TEMPLATE)
-                    f = open(basename+'.tex', 'w')
+                                          texmode='math',
+                                          template=DOT2TEX_TEMPLATE)
+                    f = open(basename + '.tex', 'w')
                     f.write(tex)
                     f.close()
                     subprocess.call(['latex', basename])
@@ -374,16 +379,16 @@ class BBTree(BinaryTree):
                         subprocess.call(['pdflatex', basename])
                     self.set_layout('dot2tex')
                     # clean auxilary files.
-                    aux_filelist = [basename+'.tex', basename+'.log',
-                                    basename+'.dvi', basename+'.aux']
+                    aux_filelist = [basename + '.tex', basename + '.log',
+                                    basename + '.dvi', basename + '.aux']
                     for f in aux_filelist:
                         os.remove(f)
             else:
                 print("Dot2tex not installed, falling back to graphviz")
                 self.set_layout('dot')
-                self.write(basename+'.'+format, self.get_layout(), format)
+                self.write(basename + '.' + format, self.get_layout(), format)
         else:
-            raise Exception('Unknown display mode %s' %self.attr['display'])
+            raise Exception('Unknown display mode %s' % self.attr['display'])
 
     def display_all(self):
         '''
@@ -400,25 +405,25 @@ class BBTree(BinaryTree):
             imTree = StringIO(tree)
             pTree = pygame.image.load(imTree, 'png')
             sTree = pTree.get_size()
-            rTree = pygame.Rect(0,0,sTree[0],sTree[1])
+            rTree = pygame.Rect(0, 0, sTree[0], sTree[1])
         if scatterplot is not None:
             imScatterplot = StringIO(scatterplot)
             pScatterplot = pygame.image.load(imScatterplot, 'png')
             sScatterplot = pScatterplot.get_size()
-            rScatterplot = pygame.Rect(sTree[0],0,sScatterplot[0],
+            rScatterplot = pygame.Rect(sTree[0], 0, sScatterplot[0],
                                        sScatterplot[1])
         if histogram is not None:
             imHistogram = StringIO(histogram)
             pHistogram = pygame.image.load(imHistogram, 'png')
             sHistogram = pHistogram.get_size()
-            rHistogram = pygame.Rect(0,sTree[1],sHistogram[0],sHistogram[1])
+            rHistogram = pygame.Rect(0, sTree[1], sHistogram[0], sHistogram[1])
         if incumbent is not None:
             imIncumbent = StringIO(incumbent)
             pIncumbent = pygame.image.load(imIncumbent, 'png')
             sIncumbent = pIncumbent.get_size()
-            rIncumbent = pygame.Rect(sTree[0],sTree[1],sIncumbent[0],
+            rIncumbent = pygame.Rect(sTree[0], sTree[1], sIncumbent[0],
                                      sIncumbent[1])
-        screen = pygame.display.set_mode((sTree[0]+sTree[0], sTree[1]+sTree[1]))
+        screen = pygame.display.set_mode((sTree[0] + sTree[0], sTree[1] + sTree[1]))
         if tree is not None:
             screen.blit(pTree, rTree)
         if scatterplot is not None:
@@ -445,7 +450,7 @@ class BBTree(BinaryTree):
                 pygame.display.quit()
                 # sys.exit() exits the whole program and I (aykut) guess it is
                 # not appropriate here.
-                #sys.exit()
+                # sys.exit()
 
     def display_image(self, gnuplot):
         if not PYGAME_INSTALLED:
@@ -482,7 +487,7 @@ class BBTree(BinaryTree):
 
     def AddOrUpdateNode(self, id, parent_id, branch_direction, status, lp_bound,
                         integer_infeasibility_count, integer_infeasibility_sum,
-                        condition_begin = None, condition_end = None,
+                        condition_begin=None, condition_end=None,
                         **attrs):
         '''
         This method designed to update nodes (in BAK) but we use it for
@@ -499,7 +504,7 @@ class BBTree(BinaryTree):
         parent_id -> node
         '''
         if (condition_begin is not None) and (condition_end is not None):
-            #Figure out the color
+            # Figure out the color
             attrs['init_log_cond'] = math.log(condition_begin, 10)
             attrs['final_log_cond'] = math.log(condition_end, 10)
         if id in self.neighbors:
@@ -517,23 +522,23 @@ class BBTree(BinaryTree):
                                    math.log(condition_end, 10))
         elif self.root is None:
             print('adding root', id)
-            self.add_root(id, status = status, lp_bound = lp_bound,
-                          integer_infeasibility_count = integer_infeasibility_count,
-                          integer_infeasibility_sum = integer_infeasibility_sum,
-                          subtree_root = None, **attrs)
+            self.add_root(id, status=status, lp_bound=lp_bound,
+                          integer_infeasibility_count=integer_infeasibility_count,
+                          integer_infeasibility_sum=integer_infeasibility_sum,
+                          subtree_root=None, **attrs)
         elif parent_id is not None:
             if branch_direction == 'L':
-                self.add_left_child(id, parent_id, status = status,
-                    lp_bound = lp_bound,
-                    integer_infeasibility_count = integer_infeasibility_count,
-                    integer_infeasibility_sum = integer_infeasibility_sum,
-                    subtree_root = None, **attrs)
+                self.add_left_child(id, parent_id, status=status,
+                                    lp_bound=lp_bound,
+                                    integer_infeasibility_count=integer_infeasibility_count,
+                                    integer_infeasibility_sum=integer_infeasibility_sum,
+                                    subtree_root=None, **attrs)
             elif branch_direction == 'R':
-                self.add_right_child(id, parent_id, status = status,
-                    lp_bound = lp_bound,
-                    integer_infeasibility_count = integer_infeasibility_count,
-                    integer_infeasibility_sum = integer_infeasibility_sum,
-                    subtree_root = None, **attrs)
+                self.add_right_child(id, parent_id, status=status,
+                                     lp_bound=lp_bound,
+                                     integer_infeasibility_count=integer_infeasibility_count,
+                                     integer_infeasibility_sum=integer_infeasibility_sum,
+                                     subtree_root=None, **attrs)
         else:
             print('this should not happen.')
             raise Exception()
@@ -554,7 +559,7 @@ class BBTree(BinaryTree):
         if integer_infeasibility_sum is not None:
             if (self._max_integer_infeasibility_sum is None or
                 integer_infeasibility_sum >
-                self._max_integer_infeasibility_sum):
+                    self._max_integer_infeasibility_sum):
                 self._max_integer_infeasibility_sum = integer_infeasibility_sum
 
     def IsBetterThan(self, value1, value2):
@@ -620,11 +625,11 @@ class BBTree(BinaryTree):
                 subtree_root = self.get_node_attr(node_id, 'subtree_root')
                 # Optional check for fathomed nodes.
                 if (self._fathom and
-                    not self.IsBetterThanIncumbent(lp_bound)):
+                        not self.IsBetterThanIncumbent(lp_bound)):
                     continue
                 active_node_count += 1
                 if (subtree_root not in subtree_bounds or
-                    self.IsBetterThan(lp_bound, subtree_bounds[subtree_root])):
+                        self.IsBetterThan(lp_bound, subtree_bounds[subtree_root])):
                     subtree_bounds[subtree_root] = lp_bound
                 if self._new_integer_solution:
                     self.set_node_attr(node_id, 'subtree_root', id)
@@ -633,7 +638,7 @@ class BBTree(BinaryTree):
         # the measure would be with the previous integer solution for
         # scaling purposes.
         if (self._new_integer_solution and
-            self._previous_incumbent_value is not None):
+                self._previous_incumbent_value is not None):
             reference_value = self._previous_incumbent_value
         else:
             reference_value = self._incumbent_value
@@ -644,7 +649,7 @@ class BBTree(BinaryTree):
         if self._new_integer_solution:
             if new_integer_ssg >= 1e-6:
                 scale_factor = (old_div(float(sum_subtree_gaps),
-                                float(new_integer_ssg)))
+                                        float(new_integer_ssg)))
             else:
                 scale_factor = 1.0
             self._sum_subtree_gaps_forecaster.StartNewSequence(scale_factor)
@@ -674,7 +679,7 @@ class BBTree(BinaryTree):
         return '%03d' % self._image_counter
 
     def WriteHistogramScript(self, num_bins, bin_width, max_bin_count,
-                                 lp_bound, data_filename, output_file):
+                             lp_bound, data_filename, output_file):
         """
         Write a Gnuplot script file to generate a histogram image.
         Args:
@@ -689,12 +694,12 @@ class BBTree(BinaryTree):
             incumbent_bin = 1 + ((self._incumbent_value -
                                   self._histogram_lower_bound) // bin_width)
             incumbent_x_coord = 0.5 + (old_div((self._incumbent_value -
-                                        self._histogram_lower_bound),
-                                       bin_width))
+                                                self._histogram_lower_bound),
+                                               bin_width))
         lp_bound_bin = 1 + ((lp_bound - self._histogram_lower_bound) //
                             bin_width)
         lp_bound_x_coord = 0.5 + (old_div((lp_bound - self._histogram_lower_bound),
-                                  bin_width))
+                                          bin_width))
         # TODO(bhunsaker): Ask Osman about adjust_xcoord option, which appears
         #    to put the vertical lines at the edge of bins rather than the
         #    true location.
@@ -704,7 +709,7 @@ class BBTree(BinaryTree):
         script += 'set terminal png notransparent size 480,360\n\n'
         # Make settings for the scatter plot.
         index_string = self.GetImageCounterString()
-        output_filename = "histogram."+index_string+".png"
+        output_filename = "histogram." + index_string + ".png"
         if output_file:
             script += 'set output "%s"\n' % output_filename
         if self._filename is None:
@@ -737,7 +742,7 @@ class BBTree(BinaryTree):
         script += '"%0.2f" %d' % (lp_bound, lp_bound_bin)
         if self._incumbent_value is not None:
             script += ', "%0.2f"%d)\n' % (self._incumbent_value,
-                                                  incumbent_bin)
+                                          incumbent_bin)
         else:
             script += ')\n'
         plot_parts = []
@@ -796,9 +801,9 @@ class BBTree(BinaryTree):
         highest_nonempty_bin = int((upper_bound -
                                     self._histogram_lower_bound) // bin_width)
         if (highest_nonempty_bin < num_bins and
-            bin_counts[highest_nonempty_bin] > 0):
+                bin_counts[highest_nonempty_bin] > 0):
             highest_x_coord = 0.5 + (old_div((upper_bound -
-                                      self._histogram_lower_bound), bin_width))
+                                              self._histogram_lower_bound), bin_width))
             highest_nonempty_bin_width, unused_int = math.modf(0.5 +
                                                                highest_x_coord)
             if highest_nonempty_bin_width == 0.0:
@@ -812,7 +817,7 @@ class BBTree(BinaryTree):
                                    self._histogram_lower_bound) // bin_width)
         if bin_counts[lowest_nonempty_bin] > 0:
             lowest_x_coord = 0.5 + (old_div((lower_bound -
-                                     self._histogram_lower_bound), bin_width))
+                                             self._histogram_lower_bound), bin_width))
             lowest_nonempty_bin_excess, unused_int = math.modf(0.5 +
                                                                lowest_x_coord)
             bin_widths[lowest_nonempty_bin] = 1.0 - lowest_nonempty_bin_excess
@@ -821,7 +826,7 @@ class BBTree(BinaryTree):
             # Scale the height appropriately
             bin_counts[lowest_nonempty_bin] /= bin_widths[lowest_nonempty_bin]
 
-    def GenerateHistogram(self, output_file = False):
+    def GenerateHistogram(self, output_file=False):
         """
         Generate files necessary for a histogram image.
         Two files are necessary: a data file and a Gnuplot script file (which
@@ -833,17 +838,17 @@ class BBTree(BinaryTree):
         # Compute the bin width and counts.
         objective_list = []
         for n in self.get_node_list():
-            if (self.get_node_attr(n,'status') == 'candidate' or
-                self.get_node_attr(n,'status') == 'pregnant'):
-                lp_bound = self.get_node_attr(n,'lp_bound')
+            if (self.get_node_attr(n, 'status') == 'candidate' or
+                    self.get_node_attr(n, 'status') == 'pregnant'):
+                lp_bound = self.get_node_attr(n, 'lp_bound')
                 if not self.IsBetterThanIncumbent(lp_bound):
                     continue
                 objective_list.append(lp_bound)
         # TODO(aykut) added the following check, we need it since we generate
         # histograms real time
         # we can not generate histogram if we do not have upperl and lower
-        #bounds
-        if len(objective_list)==0 or self._incumbent_value is None:
+        # bounds
+        if len(objective_list) == 0 or self._incumbent_value is None:
             return None
         # The first time we create a histogram, set bounds for objective
         # values.
@@ -862,14 +867,14 @@ class BBTree(BinaryTree):
                 else:
                     self._histogram_lower_bound = min(objective_list)
         bin_width = old_div((self._histogram_upper_bound -
-                     self._histogram_lower_bound), float(num_bins))
+                             self._histogram_lower_bound), float(num_bins))
         bin_counts = [0.0 for i in range(num_bins)]
         for value in objective_list:
             bin = int(math.floor(old_div((value - self._histogram_lower_bound),
-                                 bin_width)))
+                                         bin_width)))
             # Special case for the largest value.
             if (value >= self._histogram_upper_bound and
-                value < self._histogram_upper_bound + 1e-6):
+                    value < self._histogram_upper_bound + 1e-6):
                 bin = num_bins - 1
             if bin < 0:
                 return
@@ -895,13 +900,13 @@ class BBTree(BinaryTree):
                                             bin_widths[index]))
         data_file.close()
         histogram_script = self.WriteHistogramScript(num_bins, bin_width,
-                           max_bin_count, lp_bound, data_filename, output_file)
+                                                     max_bin_count, lp_bound, data_filename, output_file)
         # TODO(bhunsaker): Temporary hack
         #   This allows the bounds to be reset until an incumbent is found.
         if self._incumbent_value is None:
             self._histogram_lower_bound = None
             self._histogram_upper_bound = None
-        gp = Popen(['gnuplot'], stdin = PIPE, stdout = PIPE, stderr = STDOUT)
+        gp = Popen(['gnuplot'], stdin=PIPE, stdout=PIPE, stderr=STDOUT)
         return gp.communicate(input=histogram_script)[0]
 
     def GetImageObjectiveBounds(self, min_value, max_value):
@@ -940,7 +945,7 @@ class BBTree(BinaryTree):
         image_min_obj, image_max_obj = self.GetImageObjectiveBounds(
             self._scatterplot_lower_bound, self._scatterplot_upper_bound)
         index_string = self.GetImageCounterString()
-        output_filename = "scatterplot."+index_string+".png"
+        output_filename = "scatterplot." + index_string + ".png"
         script = ""
         # Set terminal for the output files.
         script += 'set terminal png notransparent size 480,360\n\n'
@@ -951,15 +956,15 @@ class BBTree(BinaryTree):
             script += 'set title "Scatterplot"\n'
         else:
             script += ('set title "Scatterplot: %s, %s, %ds"\n' % (
-                    self._filename, self._label, int(self._time)))
+                self._filename, self._label, int(self._time)))
         script += 'set pointsize 0.8\n'
         script += 'set nokey\n'
         script += 'set xlabel \"sum of int. infeas.\"\n'
         script += 'set ylabel \"obj. value\"\n'
         script += ('set xrange [0:%0.6f+2]\n' %
-                          self._max_integer_infeasibility_sum)
+                   self._max_integer_infeasibility_sum)
         script += ('set yrange [%0.6f:%0.6f]\n' % (image_min_obj,
-                                                          image_max_obj))
+                                                   image_max_obj))
         plot_parts = []
         # Plot the data points.
         plot_parts.append('\'%s\' with points pointtype 2 linetype 1' %
@@ -981,7 +986,7 @@ class BBTree(BinaryTree):
         script += 'show output\n'
         return script
 
-    def GenerateScatterplot(self, output_file = False):
+    def GenerateScatterplot(self, output_file=False):
         """
         Generate files necessary for a scatterplot image.
         Two files are necessary: a data file and a Gnuplot script file (which
@@ -1000,15 +1005,15 @@ class BBTree(BinaryTree):
         # for candidate and pregnant nodes.
         for node in self.get_node_list():
             status = self.get_node_attr(node, 'status')
-            lp_bound = self.get_node_attr(node,'lp_bound')
+            lp_bound = self.get_node_attr(node, 'lp_bound')
             if status == 'candidate' or status == 'pregnant':
                 # Optional check for fathomed nodes.
                 if (self._fathom and
-                    not self.IsBetterThanIncumbent(lp_bound)):
+                        not self.IsBetterThanIncumbent(lp_bound)):
                     continue
                 data_file.write('%0.6f %0.6f\n' % (
-                        self.get_node_attr(node, 'integer_infeasibility_sum'),
-                        lp_bound))
+                    self.get_node_attr(node, 'integer_infeasibility_sum'),
+                    lp_bound))
                 # Set the image objective bounds the first image.
                 if self._scatterplot_lower_bound is None:
                     bounds.append(lp_bound)
@@ -1026,7 +1031,7 @@ class BBTree(BinaryTree):
                     self._scatterplot_lower_bound = self._incumbent_value
         scatterplot_script = self.WriteScatterplotScript(data_filename,
                                                          output_file)
-        gp = Popen(['gnuplot'], stdin = PIPE, stdout = PIPE, stderr = STDOUT)
+        gp = Popen(['gnuplot'], stdin=PIPE, stdout=PIPE, stderr=STDOUT)
         return gp.communicate(input=scatterplot_script)[0]
 
     def WriteIncumbentPathScript(self, data_filename):
@@ -1044,19 +1049,19 @@ class BBTree(BinaryTree):
             script += 'set title "Incumbent path"\n'
         else:
             script += ('set title "Incumbent path (%s %.2fs %s)"\n' % (
-                    self._filename, self._time, self._label))
+                self._filename, self._time, self._label))
         script += 'set pointsize 0.8\n'
         script += 'set nokey\n'
         script += 'set xlabel \"sum of int. infeas.\"\n'
         script += 'set ylabel \"obj. value\"\n'
         script += ('set xrange [0:%0.6f+2]\n' %
-                          self._max_integer_infeasibility_sum)
+                   self._max_integer_infeasibility_sum)
         script += ('set yrange [%0.6f:%0.6f]\n' % (image_min_obj,
-                                                          image_max_obj))
+                                                   image_max_obj))
         # Plot the data points and connecting lines.
         script += ('plot \'%s\' with points pointtype 2, '
-                          '\'%s\' with lines linetype 2\n' %
-                          (data_filename, data_filename))
+                   '\'%s\' with lines linetype 2\n' %
+                   (data_filename, data_filename))
         script += 'show output\n'
         return script
 
@@ -1078,15 +1083,15 @@ class BBTree(BinaryTree):
             script += 'set title "Incumbent paths"\n'
         else:
             script += ('set title "Incumbent paths (%s %.2fs %s)"\n' % (
-                    self._filename, self._time, self._label))
+                self._filename, self._time, self._label))
         script += 'set pointsize 0.8\n'
         script += 'set nokey\n'
         script += 'set xlabel \"sum of int. infeas.\"\n'
         script += 'set ylabel \"obj. value\"\n'
         script += ('set xrange [0:%0.6f+2]\n' %
-                          self._max_integer_infeasibility_sum)
+                   self._max_integer_infeasibility_sum)
         script += ('set yrange [%0.6f:%0.6f]\n' % (image_min_obj,
-                                                          image_max_obj))
+                                                   image_max_obj))
         # Plot the data points and connecting lines.
         command_list = []
         for filename in data_filenames:
@@ -1122,14 +1127,14 @@ class BBTree(BinaryTree):
         while parent != None:
             data_file.write('%0.6f %0.6f\n'
                             % (self.get_node_attr(parent,
-                               'integer_infeasibility_sum'),
-                             self.get_node_attr(parent, 'lp_bound')))
+                                                  'integer_infeasibility_sum'),
+                               self.get_node_attr(parent, 'lp_bound')))
             parent = self.get_node_attr(parent, 'parent')
         data_file.close()
         self._incumbent_path_datafiles.append(data_filename)
         # Output the Gnuplot script to a file.
         path_script = self.WriteIncumbentPathScript(data_filename)
-        gp = Popen(['gnuplot'], stdin = PIPE, stdout = PIPE, stderr = STDOUT)
+        gp = Popen(['gnuplot'], stdin=PIPE, stdout=PIPE, stderr=STDOUT)
         return gp.communicate(input=path_script)[0]
 
     def GenerateAllIncumbentPaths(self):
@@ -1140,7 +1145,7 @@ class BBTree(BinaryTree):
         """
         all_path_script = self.WriteAllIncumbentPathsScript()
 
-    def WriteTreeScript(self, additional_lines = None):
+    def WriteTreeScript(self, additional_lines=None):
         """
         Write a Gnuplot script file to generate a tree image.
         Args:
@@ -1158,7 +1163,7 @@ class BBTree(BinaryTree):
         data += 'set pointsize 0.5\n'
         data += 'set xrange [-0.1:1.1]\n'
         data += 'set yrange [%0.6f:%0.6f]\n' % (image_max_obj,
-                                                          image_min_obj)
+                                                image_min_obj)
         data += 'set format x ""\n'
         data += 'set ylabel "obj. value"\n'
         if self._filename is None:
@@ -1202,8 +1207,8 @@ class BBTree(BinaryTree):
                 horizontal_upper_bound[node_id] = horizontal_positions[
                     parent_id]
             else:
-                print('Error: node %s has unsupported branching direction.'\
-                    %node_id)
+                print('Error: node %s has unsupported branching direction.'
+                      % node_id)
                 print('Fixed-position tree images only support L and R ')
                 print('branching.')
                 sys.exit(1)
@@ -1240,17 +1245,17 @@ class BBTree(BinaryTree):
                 node_stack.append(lchild)
                 is_node_added = True
             if (rchild is not None and not visited[quote(rchild)] and
-                is_node_added==False):
+                    is_node_added == False):
                 node_stack.append(rchild)
                 is_node_added = True
             # If all childs visited, then update number_descendants
             if not is_node_added:
                 if lchild is not None:
                     number_descendants[quote(current_node)] += (
-                                number_descendants[quote(lchild)])
+                        number_descendants[quote(lchild)])
                 if rchild is not None:
                     number_descendants[quote(current_node)] += (
-                                number_descendants[quote(rchild)])
+                        number_descendants[quote(rchild)])
                 visited[quote(current_node)] = True
                 del node_stack[len(node_stack) - 1]
         # Traverse the tree and set horizontal positions.
@@ -1285,7 +1290,7 @@ class BBTree(BinaryTree):
             sorted_child_labels = sorted(children_list)
             # Determine where to place this node with respect to its children.
             # Put the node in the center, or have more children on the left.
-            before_index = int(math.ceil(old_div(number_of_children,2.0)))
+            before_index = int(math.ceil(old_div(number_of_children, 2.0)))
             # Exception with a single node that is 'L'
             if number_of_children == 1:
                 if direction != 'L':
@@ -1331,7 +1336,7 @@ class BBTree(BinaryTree):
             outfile.write(line)
         outfile.close()
 
-    def GenerateTreeImage(self, fixed_horizontal_positions = False):
+    def GenerateTreeImage(self, fixed_horizontal_positions=False):
         """
         Generate files necessary for a tree image.
         Two files are necessary: a data file and a Gnuplot script file (which
@@ -1358,32 +1363,32 @@ class BBTree(BinaryTree):
             if self.get_node_attr(node, 'status') == 'candidate':
                 # TODO(bhunsaker): add optional fathoming check
                 candidate_lines.append('%0.6f %0.6f\n' % (
-                        horizontal_positions[node], node_lp_bound))
+                    horizontal_positions[node], node_lp_bound))
             elif self.get_node_attr(node, 'status') == 'pregnant':
                 # TODO(bhunsaker): add optional fathoming check
                 pregnant_lines.append('%0.6f %0.6f\n' % (
-                        horizontal_positions[node], node_lp_bound))
+                    horizontal_positions[node], node_lp_bound))
             elif self.get_node_attr(node, 'status') == 'branched':
                 branched_lines.append('%0.6f %0.6f\n' % (
-                        horizontal_positions[node], node_lp_bound))
+                    horizontal_positions[node], node_lp_bound))
             elif self.get_node_attr(node, 'status') == 'infeasible':
                 infeasible_lines.append('%0.6f %0.6f\n' % (
-                        horizontal_positions[node], node_lp_bound))
+                    horizontal_positions[node], node_lp_bound))
             elif self.get_node_attr(node, 'status') == 'fathomed':
                 fathomed_lines.append('%0.6f %0.6f\n' % (
-                        horizontal_positions[node], node_lp_bound))
+                    horizontal_positions[node], node_lp_bound))
             elif self.get_node_attr(node, 'status') == 'integer':
                 integer_lines.append('%0.6f %0.6f\n' % (
-                        horizontal_positions[node], node_lp_bound))
+                    horizontal_positions[node], node_lp_bound))
             if print_edges and node != self.root.name:
                 if True:
                     _parent_id = self.get_node_attr(node, 'parent')
                     additional_script_lines.append(
-                     'set arrow from %0.6f, %0.6f to %0.6f, %0.6f nohead lt -1 '
-                     'lw 0.2\n' % (horizontal_positions[_parent_id],
-                     self.get_node_attr(_parent_id, 'lp_bound'),
-                     horizontal_positions[node],
-                     self.get_node_attr(node, 'lp_bound')))
+                        'set arrow from %0.6f, %0.6f to %0.6f, %0.6f nohead lt -1 '
+                        'lw 0.2\n' % (horizontal_positions[_parent_id],
+                                      self.get_node_attr(_parent_id, 'lp_bound'),
+                                      horizontal_positions[node],
+                                      self.get_node_attr(node, 'lp_bound')))
         plot_parts = []
         # Plot root node.
         plot_parts.append('"< echo %0.6f %0.6f" w p lt 2 pt 7' %
@@ -1432,7 +1437,7 @@ class BBTree(BinaryTree):
         if len(candidate_lines):
             for line in candidate_lines:
                 plot_parts.append('"< echo %s" w p lt rgb "green" pt 7'
-                                  %line.rstrip('\r\n'))
+                                  % line.rstrip('\r\n'))
         if len(integer_lines):
             self.WriteDataFileFromList('%s_integer%s.dat' % (name_prefix,
                                                              index_string),
@@ -1453,7 +1458,7 @@ class BBTree(BinaryTree):
         data += 'set pointsize 0.5\n'
         data += 'set xrange [-0.1:1.1]\n'
         data += 'set yrange [%0.6f:%0.6f]\n' % (image_max_obj,
-                                                          image_min_obj)
+                                                image_min_obj)
         data += 'set format x ""\n'
         data += 'set ylabel "obj. value"\n'
         if self._filename is None:
@@ -1463,7 +1468,7 @@ class BBTree(BinaryTree):
                 self._filename, self._time, self._label)
         for line in additional_script_lines:
             data += line
-        gp = Popen(['gnuplot'], stdin = PIPE, stdout = PIPE, stderr = STDOUT)
+        gp = Popen(['gnuplot'], stdin=PIPE, stdout=PIPE, stderr=STDOUT)
         return gp.communicate(input=data)[0]
 
     def ProcessLine(self, line):
@@ -1480,7 +1485,7 @@ class BBTree(BinaryTree):
             return
         tokens = line.split()
         if len(tokens) < 3:
-            print('Incomplete or invalid line: %s' %' '.join(tokens))
+            print('Incomplete or invalid line: %s' % ' '.join(tokens))
             sys.exit(1)
         # Tokens shared by all line types
         self._time = float(tokens[0])
@@ -1497,7 +1502,7 @@ class BBTree(BinaryTree):
             branch_direction = tokens[4]
             remaining_tokens = tokens[5:]
             # TODO(aykut):parent id of root node is 0 when we read from file.
-            if id==self.root:
+            if id == self.root:
                 parent_id = None
             # Check that the parent node id is valid
             # elif parent_id not in self.get_node_list() and self.root is not None:
@@ -1537,9 +1542,9 @@ class BBTree(BinaryTree):
         # Parse remaining tokens
         if len(remaining_tokens) < 1 or len(remaining_tokens) > 2:
             print('Invalid line: %s heuristic %s' % (
-                    self._time, ' '.join(remaining_tokens)))
-            print('Should match: <time> heuristic <obj value>'+\
-                ' [<associated node id>]')
+                self._time, ' '.join(remaining_tokens)))
+            print('Should match: <time> heuristic <obj value>' +
+                  ' [<associated node id>]')
             sys.exit(1)
         objective_value = float(remaining_tokens[0])
         if len(remaining_tokens) == 2:
@@ -1578,10 +1583,10 @@ class BBTree(BinaryTree):
         # Parse remaining tokens
         if len(remaining_tokens) != 1:
             print('Invalid line: %s integer %s %s %s %s' % (
-                    self._time, node_id, parent_id, branch_direction,
-                    ' '.join(remaining_tokens)))
-            print('Should match: <time> integer <node id> <parent id>'+\
-                '<branch direction> <obj value>')
+                self._time, node_id, parent_id, branch_direction,
+                ' '.join(remaining_tokens)))
+            print('Should match: <time> integer <node id> <parent id>' +
+                  '<branch direction> <obj value>')
             sys.exit(1)
         objective_value = float(remaining_tokens[0])
         self.AddOrUpdateNode(node_id, parent_id, branch_direction, 'integer',
@@ -1610,26 +1615,26 @@ class BBTree(BinaryTree):
         # Parse remaining tokens
         if len(remaining_tokens) > 1:
             print('Invalid line: %s fathomed %s %s %s %s' % (
-                    self._time, node_id, parent_id, branch_direction,
-                    ' '.join(remaining_tokens)))
-            print('Should match: <time> fathomed <node id> <parent id>'+\
-                '<branch direction> [<lp bound>]')
+                self._time, node_id, parent_id, branch_direction,
+                ' '.join(remaining_tokens)))
+            print('Should match: <time> fathomed <node id> <parent id>' +
+                  '<branch direction> [<lp bound>]')
             sys.exit(1)
         if len(remaining_tokens) == 1:
             lp_bound = float(remaining_tokens[0])
         else:
             if (node_id in self.get_node_list() and
-                self.get_node_attr(node_id, 'lp_bound') is not None):
+                    self.get_node_attr(node_id, 'lp_bound') is not None):
                 lp_bound = self.get_node_attr(node_id, 'lp_bound')
             else:
                 lp_bound = self.get_node_attr(parent_id, 'lp_bound')
             if self._optimization_sense == 'min':
                 if (self._incumbent_value is not None and
-                    lp_bound < self._incumbent_value):
+                        lp_bound < self._incumbent_value):
                     lp_bound = self._incumbent_value
             elif self._optimization_sense == 'max':
                 if (self._incumbent_value is not None and
-                    lp_bound > self._incumbent_value):
+                        lp_bound > self._incumbent_value):
                     lp_bound = self._incumbent_value
         parent_node = self.get_node(parent_id)
         self.AddOrUpdateNode(node_id, parent_id, branch_direction, 'fathomed',
@@ -1654,8 +1659,8 @@ class BBTree(BinaryTree):
         # Parse remaining tokens
         if len(remaining_tokens) != 3:
             print('Invalid line: %s pregnant %s %s %s %s' % (
-                    self._time, node_id, parent_id, branch_direction,
-                    ' '.join(remaining_tokens)))
+                self._time, node_id, parent_id, branch_direction,
+                ' '.join(remaining_tokens)))
             print('Should match: <time> pregnant <node id> <parent id> ')
             print('<branch direction> <lp bound> ')
             print('<sum of integer infeasibilities> <number of integer ')
@@ -1684,8 +1689,8 @@ class BBTree(BinaryTree):
         # Parse remaining tokens
         if len(remaining_tokens) not in [3, 5]:
             print('Invalid line: %s branched %s %s %s %s' % (
-                    self._time, node_id, parent_id, branch_direction,
-                    ' '.join(remaining_tokens)))
+                self._time, node_id, parent_id, branch_direction,
+                ' '.join(remaining_tokens)))
             print('Should match: <time> branched <node id> <parent id> ')
             print('<branch direction> <lp bound> ')
             print('<sum of integer infeasibilities> <number of integer ')
@@ -1720,8 +1725,8 @@ class BBTree(BinaryTree):
         # Parse remaining tokens
         if len(remaining_tokens) not in [0, 2]:
             print('Invalid line: %s infeasible %s %s %s %s' % (
-                    self._time, node_id, parent_id, branch_direction,
-                    ' '.join(remaining_tokens)))
+                self._time, node_id, parent_id, branch_direction,
+                ' '.join(remaining_tokens)))
             print('Should match: <time> infeasible <node id> <parent id> ')
             print('<branch direction>')
             sys.exit(1)
@@ -1733,12 +1738,12 @@ class BBTree(BinaryTree):
             if self.get_node_attr(node_id, 'lp_bound') is not None:
                 lp_bound = self.get_node_attr(node_id, 'lp_bound')
             if (self.get_node_attr(node_id, 'integer_infeasibility_count')
-                is not None):
+                    is not None):
                 ii_count = self.get_node_attr(node_id,
                                               'integer_infeasibility_count')
             if (self.get_node_attr(node_id, 'integer_infeasibility_sum')
-                is not None):
-                ii_sum = self.get_node_attr(node_id,'integer_infeasibility_sum')
+                    is not None):
+                ii_sum = self.get_node_attr(node_id, 'integer_infeasibility_sum')
         if len(remaining_tokens) == 2:
             # In this case, we must also be printing conditions numbers
             condition_begin = int(remaining_tokens[0])
@@ -1761,8 +1766,8 @@ class BBTree(BinaryTree):
         # Parse remaining tokens
         if len(remaining_tokens) == 2 or len(remaining_tokens) > 3:
             print('Invalid line: %s branched %s %s %s %s' % (
-                    self._time, node_id, parent_id, branch_direction,
-                    ' '.join(remaining_tokens)))
+                self._time, node_id, parent_id, branch_direction,
+                ' '.join(remaining_tokens)))
             print('Should match: <time> candidate <node id> <parent id> ')
             print('<branch direction> [<lp bound>] ')
             print('[<sum of integer infeasibilities> <number of integer ')
@@ -1772,7 +1777,7 @@ class BBTree(BinaryTree):
         #     print 'Error: node %s not in set' % parent_id
         #     sys.exit(1)
         # TODO(bhunsaker): Check that we handle the cases of updating a
-        #candidate.
+        # candidate.
         if len(remaining_tokens) > 0:
             lp_bound = float(remaining_tokens[0])
         else:
@@ -1782,9 +1787,9 @@ class BBTree(BinaryTree):
             integer_infeasibility_count = int(remaining_tokens[2])
         else:
             integer_infeasibility_sum = self.get_node_attr(parent_id,
-                                                  'integer_infeasibility_sum')
+                                                           'integer_infeasibility_sum')
             integer_infeasibility_count = self.get_node_attr(parent_id,
-                                                'integer_infeasibility_count')
+                                                             'integer_infeasibility_count')
         self.AddOrUpdateNode(node_id, parent_id, branch_direction, 'candidate',
                              lp_bound, integer_infeasibility_count,
                              integer_infeasibility_sum)
@@ -1838,8 +1843,8 @@ class BBTree(BinaryTree):
         ssg_measures = self._sum_subtree_gaps_forecaster.GetAllMeasures()
         # Check that there are values to process.
         if len(gap_measures) == 0 or len(ssg_measures) == 0:
-            print('WARNING: Not printing prediction images because at least'+\
-                ' one measure set is empty.')
+            print('WARNING: Not printing prediction images because at least' +
+                  ' one measure set is empty.')
             print('  Gap measures: %d' % len(gap_measures))
             print('  SSG measures: %d' % len(ssg_measures))
             return
@@ -1854,7 +1859,7 @@ class BBTree(BinaryTree):
         data_file = open(ssg_data_filename, 'w')
         # We need to scale the SSG measures so that it will make sense to
         # look at them on the same plot with gap measures.
-        scale_factor=old_div(float(gap_measures[0].value),float(ssg_measures[0].value))
+        scale_factor = old_div(float(gap_measures[0].value), float(ssg_measures[0].value))
         for measure in ssg_measures:
             data_file.write('%0.6f %0.6f\n' % (measure.time,
                                                measure.value * scale_factor))
@@ -1866,7 +1871,7 @@ class BBTree(BinaryTree):
             measures_script += 'set title "Progress Measures"\n'
         else:
             measures_script += ('set title "Progress Measures: %s, %s"\n' % (
-                    self._filename, self._label))
+                self._filename, self._label))
         measures_script += 'set xlabel \"time (s)\"\n'
         measures_script += 'set ylabel \"measure\"\n'
         measures_script += 'set autoscale\n'
@@ -1878,7 +1883,7 @@ class BBTree(BinaryTree):
             (ssg_data_filename, gap_data_filename))
         measures_script += 'show output\n'
         # Pipe gnuplot with measures_script
-        gp = Popen(['gnuplot'], stdin = PIPE, stdout = PIPE, stderr = STDOUT)
+        gp = Popen(['gnuplot'], stdin=PIPE, stdout=PIPE, stderr=STDOUT)
         return gp.communicate(input=measures_script)[0]
 
     def GenerateForecastImages(self):
@@ -1911,7 +1916,7 @@ class BBTree(BinaryTree):
             forecast_script += 'set title "Forecasts"\n'
         else:
             forecast_script += ('set title "Forecasts: %s, %s"\n' % (
-                    self._filename, self._label))
+                self._filename, self._label))
         forecast_script += 'set xlabel \"time (s)\"\n'
         forecast_script += 'set ylabel \"prediction of total time\"\n'
         forecast_script += 'set autoscale\n'
@@ -1919,14 +1924,14 @@ class BBTree(BinaryTree):
         forecast_script += 'plot '
         if forecast_forecasts:
             forecast_script += ('\'%s\' with linespoints linetype 3 '
-                              'title \"(SSG)\", ' % ssg_data_filename)
+                                'title \"(SSG)\", ' % ssg_data_filename)
         if gap_forecasts:
             forecast_script += ('\'%s\' with linespoints linetype 4 pointtype 19 '
-            'title \"(MIP gap)\", ' % gap_data_filename)
+                                'title \"(MIP gap)\", ' % gap_data_filename)
         forecast_script += 'x linetype 0 title \"elapsed time\"\n'
         forecast_script += 'show output\n'
         # pipe gnuplot with forecast_script
-        gp = Popen(['gnuplot'], stdin = PIPE, stdout = PIPE, stderr = STDOUT)
+        gp = Popen(['gnuplot'], stdin=PIPE, stdout=PIPE, stderr=STDOUT)
         return gp.communicate(input=forecast_script)[0]
 
     def _get_fh(self, path, mode='r'):
@@ -1937,15 +1942,15 @@ class BBTree(BinaryTree):
         '''
         if self._is_string_like(path):
             if path.endswith('.gz'):
-#               import gzip
-#               fh = gzip.open(path,mode=mode)  # doesn't return real fh
-                fh=os.popen("gzcat "+path) # probably not portable
+                #               import gzip
+                #               fh = gzip.open(path,mode=mode)  # doesn't return real fh
+                fh = os.popen("gzcat " + path)  # probably not portable
             elif path.endswith('.bz2'):
-#               import bz2
-#               fh = bz2.BZ2File(path,mode=mode) # doesn't return real fh
-                fh=os.popen("bzcat "+path) # probably not portable
+                #               import bz2
+                #               fh = bz2.BZ2File(path,mode=mode) # doesn't return real fh
+                fh = os.popen("bzcat " + path)  # probably not portable
             else:
-                fh = file(path,mode=mode)
+                fh = file(path, mode=mode)
         elif hasattr(path, 'write'):
             # Note, mode of file handle is unchanged.
             fh = path
@@ -1953,12 +1958,13 @@ class BBTree(BinaryTree):
             raise TypeError('path must be a string or file handle.')
         return fh
 
-    def _is_string_like(self, obj): # from John Hunter, types-free version
+    def _is_string_like(self, obj):  # from John Hunter, types-free version
         try:
             obj + ''
         except (TypeError, ValueError):
             return False
         return True
+
 
 def CreatePerlStyleBooleanFlag(parser, flag_text, variable_name, help_text):
     """
@@ -1978,6 +1984,7 @@ def CreatePerlStyleBooleanFlag(parser, flag_text, variable_name, help_text):
     parser.add_option('--no' + flag_text,
                       action='store_false', dest=variable_name,
                       help='do not ' + flag_text)
+
 
 def parse_options():
     ''' Parse arguments and flags'''
@@ -2048,7 +2055,7 @@ def parse_options():
     # Abort if no images chosen
     if (not options.histogram and not options.scatterplot and
         not options.path and not options.tree and not options.fixed_tree and
-        not options.predictions):
+            not options.predictions):
         print('No image types specified so not processing.')
         parser.print_usage()
         sys.exit(1)
@@ -2070,7 +2077,7 @@ def parse_options():
     # Abort if no images chosen
     if (not options.histogram and not options.scatterplot and
         not options.path and not options.tree and not options.fixed_tree and
-        not options.predictions):
+            not options.predictions):
         print('No image types specified so not processing.')
         sys.exit(1)
     # Bounds for incumbent paths will be undefined without scatterplots.
@@ -2083,12 +2090,12 @@ if __name__ == '__main__':
     from .BranchAndBound import GenerateRandomMIP, BranchAndBound
 
     T = BBTree()
-    #T.set_layout('dot2tex')
-    #T.set_display_mode('file')
+    # T.set_layout('dot2tex')
+    # T.set_display_mode('file')
     T.set_display_mode('matplotlib')
-    #T.set_display_mode('pygame')
-    CONSTRAINTS, VARIABLES, OBJ, MAT, RHS = GenerateRandomMIP(rand_seed = 120)
+    # T.set_display_mode('pygame')
+    CONSTRAINTS, VARIABLES, OBJ, MAT, RHS = GenerateRandomMIP(rand_seed=120)
     BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
-                   branch_strategy = MOST_FRACTIONAL,
-                   search_strategy = BEST_FIRST,
-                   display_interval = 10000)
+                   branch_strategy=MOST_FRACTIONAL,
+                   search_strategy=BEST_FIRST,
+                   display_interval=10000)
