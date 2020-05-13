@@ -1,36 +1,20 @@
 '''
-File: BranchAndBound copy.py
+File: cylpBranchAndBound.py
 Author: Yutong Dai (rothdyt@gmail.com)
 File Created: 2020-05-12 23:40
-Last Modified: 2020-05-13 12:28
+Last Modified: 2020-05-13 12:50
 --------------------------------------------
 Description:
 '''
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-from builtins import str
-from builtins import range
-from past.utils import old_div
-__author__ = 'Ted Ralphs'
-__maintainer__ = 'Ted Ralphs (ted@lehigh.edu)'
-
 import random
 import sys
 import math
-try:
-    from src.blimpy import PriorityQueue
-except (ImportError, ModuleNotFoundError):
-    from coinor.blimpy import PriorityQueue
 import time
-try:
-    from .BBTree import BBTree
-    from .BBTree import MOST_FRACTIONAL, FIXED_BRANCHING, PSEUDOCOST_BRANCHING
-    from .BBTree import DEPTH_FIRST, BEST_FIRST, BEST_ESTIMATE, INFINITY
-except (ImportError, ModuleNotFoundError):
-    from BBTree import BBTree
-    from BBTree import MOST_FRACTIONAL, FIXED_BRANCHING, PSEUDOCOST_BRANCHING
-    from BBTree import DEPTH_FIRST, BEST_FIRST, BEST_ESTIMATE, INFINITY
+from coinor.blimpy import PriorityQueue
+from past.utils import old_div
+from coinor.grumpy import BBTree
+from coinor.grumpy import MOST_FRACTIONAL, FIXED_BRANCHING, PSEUDOCOST_BRANCHING
+from coinor.grumpy import DEPTH_FIRST, BEST_FIRST, BEST_ESTIMATE, INFINITY
 import numpy as np
 from cylp.cy.CyClpSimplex import CyClpSimplex
 from cylp.py.modeling.CyLPModel import CyLPModel, CyLPArray
