@@ -72,8 +72,8 @@ def BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
     numVars = len(VARIABLES)
     # List of incumbent solution variable values
     opt = dict([(i, 0) for i in range(len(VARIABLES))])
-    pseudo_u = dict((i, (OBJ[i], 0)) for i in range(len(VARIABLES)))
-    pseudo_d = dict((i, (OBJ[i], 0)) for i in range(len(VARIABLES)))
+    pseudo_u = dict((i, (-OBJ[i], 0)) for i in range(len(VARIABLES)))
+    pseudo_d = dict((i, (-OBJ[i], 0)) for i in range(len(VARIABLES)))
     print("===========================================")
     print("Starting Branch and Bound")
     if branch_strategy == MOST_FRACTIONAL:
@@ -158,7 +158,7 @@ def BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
             print()
         # Solve the LP relaxation
         s = CyClpSimplex(prob)
-        s.primal()
+        s.initialSolve()
         lp_count = lp_count + 1
         # Check infeasibility
         # -1 - unknown e.g. before solve or if postSolve says not optimal
