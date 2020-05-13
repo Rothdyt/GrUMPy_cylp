@@ -2,10 +2,11 @@
 File: generator.py
 Author: Yutong Dai (rothdyt@gmail.com)
 File Created: 2020-05-13 12:53
-Last Modified: 2020-05-13 12:53
+Last Modified: 2020-05-13 12:58
 --------------------------------------------
 Description:
 '''
+import random
 
 
 def GenerateRandomMIP(numVars=40, numCons=20, density=0.2,

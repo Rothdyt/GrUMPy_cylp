@@ -2,12 +2,11 @@
 File: cylpBranchAndBound.py
 Author: Yutong Dai and Muqing Zheng
 File Created: 2020-05-12 23:40
-Last Modified: 2020-05-13 12:55
+Last Modified: 2020-05-13 12:58
 --------------------------------------------
 Description:
 Modified based on coinor.grumpy
 '''
-import random
 import sys
 import math
 import time
