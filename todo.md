@@ -1,4 +1,8 @@
-- [] Translate `Pulp` into `Cylp`.
+- [Done] Translate `Pulp` into `Cylp`.
   - Preferably write necessary api usage in `cylp_tutorial` folder for debug purpose.
 - [Done] Translate `py2` print to `py3` print.
   - I guess there's some hack without explicitly rewriting all `print` syntax.
+- [] Implement Realibity Branching.
+  - Do it individually and compare for debugging.
+- [] Implement hybrid strong/pseudocost branching
+  - Do it individually and compare for debugging.	 
