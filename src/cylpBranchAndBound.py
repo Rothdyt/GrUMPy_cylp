@@ -2,7 +2,7 @@
 File: cylpBranchAndBound.py
 Author: Yutong Dai and Muqing Zheng
 File Created: 2020-05-12 23:40
-Last Modified: 2020-05-13 15:02
+Last Modified: 2020-05-13 19:21
 --------------------------------------------
 Description:
 Modified based on coinor.grumpy
@@ -370,8 +370,8 @@ def BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
                 for i in range(len(VARIABLES)):
                     # find the fractional solutions
                     if (var_values[i] - math.floor(var_values[i])) != 0:
-                        scores[i] = min(pseudo_u[i][0] * (1 - var_values[i]),
-                                        pseudo_d[i][0] * var_values[i])
+                        scores[i] = min(pseudo_u[i][0] * (math.ceil(var_values[i]) - var_values[i]),
+                                        pseudo_d[i][0] * (var_values[i] - math.floor(var_values[i])))
                     # sort the dictionary by value
                 branching_var = sorted(list(scores.items()),
                                        key=lambda x: x[1])[-1][0]
@@ -433,9 +433,11 @@ if __name__ == '__main__':
     from generator import GenerateRandomMIP
     T = BBTree()
     T.set_display_mode('xdot')
-    CONSTRAINTS, VARIABLES, OBJ, MAT, RHS = GenerateRandomMIP(numVars=30, numCons=20, rand_seed=100)
+    CONSTRAINTS, VARIABLES, OBJ, MAT, RHS = GenerateRandomMIP(numVars=10, numCons=5, rand_seed=100, density=1)
     BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
-                   branch_strategy=MOST_FRACTIONAL,
+                   branch_strategy=FIXED_BRANCHING,
                    search_strategy=BEST_FIRST,
                    display_interval=10000,
-                   solver='primalSimplex')
+                   solver='primalSimplex',
+                   binary_vars=False
+                   )
