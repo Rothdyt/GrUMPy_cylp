@@ -2,7 +2,7 @@
 File: cylpBranchAndBound.py
 Author: Yutong Dai and Muqing Zheng
 File Created: 2020-05-12 23:40
-Last Modified: 2020-05-13 14:57
+Last Modified: 2020-05-13 15:02
 --------------------------------------------
 Description:
 Modified based on coinor.grumpy
@@ -433,8 +433,9 @@ if __name__ == '__main__':
     from generator import GenerateRandomMIP
     T = BBTree()
     T.set_display_mode('xdot')
-    CONSTRAINTS, VARIABLES, OBJ, MAT, RHS = GenerateRandomMIP(numVars=20, numCons=15, density=0.1, rand_seed=127)
+    CONSTRAINTS, VARIABLES, OBJ, MAT, RHS = GenerateRandomMIP(numVars=30, numCons=20, rand_seed=100)
     BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
                    branch_strategy=MOST_FRACTIONAL,
                    search_strategy=BEST_FIRST,
-                   display_interval=10000)
+                   display_interval=10000,
+                   solver='primalSimplex')
