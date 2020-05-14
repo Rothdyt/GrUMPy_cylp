@@ -436,11 +436,8 @@ def BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
 
 if __name__ == '__main__':
     T = BBTree()
-    # T.set_layout('dot2tex')
-    # T.set_display_mode('file')
     T.set_display_mode('xdot')
-    # T.set_display_mode('pygame')
-    CONSTRAINTS, VARIABLES, OBJ, MAT, RHS = GenerateRandomMIP(rand_seed=120)
+    CONSTRAINTS, VARIABLES, OBJ, MAT, RHS = GenerateRandomMIP(numVars=30, numCons=20, rand_seed=100)
     BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
                    branch_strategy=MOST_FRACTIONAL,
                    search_strategy=BEST_FIRST,
