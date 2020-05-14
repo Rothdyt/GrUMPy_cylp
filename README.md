@@ -65,7 +65,7 @@ python src/cylpBranchAndBound
 
 Branch strategy can be chosen from `MOST_FRACTIONAL`, `FIXED_BRANCHING`, `PSEUDOCOST_BRANCHING`, `RELIABILITY_BRANCHING`, `RELIABILITY_BRANCHING`, and `HYBRID`.
 
-Search strategy can be chosen from `DEPTH_FIRST`, `BEST_FIRST`, and `BEST_ESTIMATE`, `RELIABILITY_BRANCHING`, and `RELIABILITY_BRANCHING`.
+Search strategy can be chosen from `DEPTH_FIRST`, `BEST_FIRST`, and `BEST_ESTIMATE`.
 
 Solver can be chosen from `dynamic`, which pick primal or dual simplex automatically, `primalSimplex`, and `dualSimplex`.
 
