@@ -22,7 +22,7 @@ opt, LB, stat1 = BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
                              search_strategy=DEPTH_FIRST,
                              display_interval=10000,
                              solver='primalSimplex',
-							 rel_param=(4, 3, 1 / 6, 5),
+			     rel_param=(4, 3, 1 / 6, 5),
                              binary_vars=True,
                              more_return=True
                              )
