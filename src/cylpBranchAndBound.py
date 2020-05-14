@@ -2,7 +2,7 @@
 File: cylpBranchAndBound.py
 Author: Yutong Dai and Muqing Zheng
 File Created: 2020-05-12 23:40
-Last Modified: 2020-05-13 21:59
+Last Modified: 2020-05-13 22:37
 --------------------------------------------
 Description:
 Modified based on coinor.grumpy
@@ -53,8 +53,11 @@ def BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
             False - return maximizer and max 
             True  - also return a dict of stats(time, tree size, LP solved)
     """
+    ACTUAL_BRANCH_STRATEGY = branch_strategy
     # reliability branching parameters
     eta_rel, gamma, mu, lam = rel_param
+    # hybrid branching parameters
+    total_num_pivot = average_num_pivot = 0
     # translate problems into cylp format
     cyOBJ = CyLPArray([-val for val in OBJ.values()])
     cyMAT = np.matrix([MAT[v] for v in VARIABLES]).T
@@ -140,6 +143,7 @@ def BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
         # maximum allowed strong branch performed
         if branch_strategy == HYBRID and cur_depth > max(int(len(VARIABLES) * 0.2), 5):
             branch_strategy = PSEUDOCOST_BRANCHING
+            print("Switch from strong branch to psedocost branch")
         infeasible = False
         integer_solution = False
         (cur_index, parent, relax, branch_var, branch_var_value, sense,
@@ -204,6 +208,8 @@ def BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
         else:
             s.initialSolve()
         lp_count = lp_count + 1
+        total_num_pivot += s.iteration
+        average_num_pivot = total_num_pivot / lp_count
         # Check infeasibility
         # -1 - unknown e.g. before solve or if postSolve says not optimal
         # 0 - optimal
@@ -475,11 +481,22 @@ def BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
                                         pseudo_d[i][0] * (var_values[i]
                                                           - math.floor(var_values[i])))
                 candidate_vars = [en[0] for en in sorted(list(scores.items()), key=lambda x: x[1], reverse=True)]
-                print(candidate_vars)
                 restricted_candidate_vars = candidate_vars[:max(1, int(0.5 * len(candidate_vars)))]
+                print("Subset of candidate variables:")
+                print(restricted_candidate_vars)
+                best_progress = 0
                 for i in restricted_candidate_vars:
-
-                branching_var = candidate_vars[-1]
+                    s = CyClpSimplex(prob)
+                    s += math.floor(var_values[i]) <= x[i] <= math.ceil(var_values[i])
+                    s.maxNumIteration = average_num_pivot * 2
+                    s.dual()
+                    if s.getStatusCode() == 0:
+                        lp_count += 1
+                    progress = relax - (-s.objectiveValue)
+                    if progress > best_progress:
+                        branch_var = i
+                        best_progress = progress
+                branching_var = branch_var
 
             else:
                 print("Unknown branching strategy %s" % branch_strategy)
@@ -513,7 +530,7 @@ def BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
     print("")
     print("===========================================")
     print("Branch and bound completed in %sms" % timer)
-    print("Strategy: %s" % branch_strategy)
+    print("Strategy: %s" % ACTUAL_BRANCH_STRATEGY)
     if complete_enumeration:
         print("Complete enumeration")
     print("%s nodes visited " % node_count)
