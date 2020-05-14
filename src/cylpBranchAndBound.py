@@ -572,6 +572,8 @@ def BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
             stat['Halfly Solved'] = half_solved
             stat['Fully Solved'] = full_solved
         return opt, LB, stat
+    
+    return opt, LB
 
 
 if __name__ == '__main__':
