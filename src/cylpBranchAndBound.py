@@ -2,7 +2,7 @@
 File: cylpBranchAndBound.py
 Author: Yutong Dai and Muqing Zheng
 File Created: 2020-05-12 23:40
-Last Modified: 2020-05-13 22:49
+Last Modified: 2020-05-13 23:44
 --------------------------------------------
 Description:
 Modified based on coinor.grumpy
@@ -173,7 +173,7 @@ def BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
             prob += 0 <= x <= 1
         else:
             x = prob.addVariable('x', dim=len(VARIABLES))
-            # prob += 0 <= x  # To avoid random generated problems be unbounded
+            prob += 0 <= x  # To avoid random generated problems be unbounded
         prob.objective = OBJ * x
         prob += MAT * x <= RHS
         # Fix all prescribed variables
@@ -482,8 +482,8 @@ def BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
                                                           - math.floor(var_values[i])))
                 candidate_vars = [en[0] for en in sorted(list(scores.items()), key=lambda x: x[1], reverse=True)]
                 restricted_candidate_vars = candidate_vars[:max(1, int(0.5 * len(candidate_vars)))]
-                print("Subset of candidate variables:")
-                print(restricted_candidate_vars)
+                # print("Subset of candidate variables:")
+                # print(restricted_candidate_vars)
                 best_progress = 0
                 branch_candidate = None
                 for i in restricted_candidate_vars:
@@ -562,11 +562,26 @@ if __name__ == '__main__':
     from generator import GenerateRandomMIP
     T = BBTree()
     T.set_display_mode('xdot')
-    CONSTRAINTS, VARIABLES, OBJ, MAT, RHS = GenerateRandomMIP(numVars=40, numCons=20, rand_seed=100, density=0.2)
-    BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
-                   branch_strategy=HYBRID,
-                   search_strategy=BEST_FIRST,
-                   display_interval=10000,
-                   solver='primalSimplex',
-                   binary_vars=True
-                   )
+    CONSTRAINTS, VARIABLES, OBJ, MAT, RHS = GenerateRandomMIP(numVars=20, numCons=15, rand_seed=10, density=0.2)
+    _, _, stat1 = BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
+                                 branch_strategy=HYBRID,
+                                 search_strategy=DEPTH_FIRST,
+                                 display_interval=10000,
+                                 solver='primalSimplex',
+                                 binary_vars=False,
+                                 more_return=True
+                                 )
+    T = BBTree()
+    T.set_display_mode('xdot')
+    _, _, stat2 = BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
+                                 branch_strategy=PSEUDOCOST_BRANCHING,
+                                 search_strategy=DEPTH_FIRST,
+                                 display_interval=10000,
+                                 solver='primalSimplex',
+                                 binary_vars=False,
+                                 more_return=True
+                                 )
+    print(HYBRID)
+    print(stat1)
+    print(PSEUDOCOST_BRANCHING)
+    print(stat2)
