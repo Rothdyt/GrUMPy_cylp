@@ -40,15 +40,16 @@ def BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
             primalSimplex - initialPrimalSolve 
             dualSimplex   - initialDualSolve
 
+        Parameter Tuple for Reliability Branching
         rel_param = (eta_rel,gamma,mu,lambda):
             eta_rel = 0       - psesudocost branching
             eta_rel = 1       - psesudocost branching with strong branching initialization
-            eta_rel = 4,8     - best performing branching rules
+            eta_rel = 4,8     - best performing reliability branching rules
             eta_rel = inifity - strong branching
-            gamma             - max number of iterations in score calculation
+            gamma             - max number of simplex iterations in score calculation
             mu                - score factor, a number between 0 and 1. Paper uses 1/6
             lambda            - if max score is not updated for lambda 
-                                consecutive iteration, return the index of this variable
+                                consecutive iterations, stop.
         more_return:
             False - return maximizer and max 
             True  - also return a dict of stats(time, tree size, LP solved)
@@ -434,12 +435,12 @@ def BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
                         qm = pseudo_d[i][0] * (var_values[i]
                                                - math.floor(var_values[i]))  # q^^-
                         scores[i] = (1 - mu) * min(qm, qp) + mu * max(qm, qp)
-                        #scores[i] = min(qm,qp)
+               
                 # sort the dictionary by value
                 candidate_vars = [en[0] for en in sorted(list(scores.items()), key=lambda x: x[1], reverse=True)]
 
-                no_change = 0
-                smax = scores[candidate_vars[0]]
+                no_change = 0 # number of iterations that maximum of scores is not changed
+                smax = scores[candidate_vars[0]] # current maximum of scores
                 for i in candidate_vars:
                     if min(pseudo_d[i][1], pseudo_u[i][1]) < eta_rel:
                         qp = pseudo_u[i][0] * (math.ceil(var_values[i]) - var_values[i])  # q^+
@@ -448,27 +449,27 @@ def BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
                         # left subproblem/down direction
                         s_left = CyClpSimplex(prob)
                         s_left += x[i] <= math.floor(var_values[i])
-                        s_left.maxNumIteration = gamma
+                        s_left.maxNumIteration = gamma # solve for fixed number of iterations
                         s_left.dual()
                         if s_left.getStatusCode() == 0:
-                            qm = relax + s_left.objectiveValue  # delta^-
+                            qm = relax + s_left.objectiveValue  # use a more reliable source to update q^-
                             full_solved = full_solved + 1
-                            lp_count = lp_count + 1
+                            lp_count = lp_count + 1 # If the LP is fully solved, counter plus one
                         elif s_left.getStatusCode() == 3:
-                            qm = relax + s_left.objectiveValue  # delta^-
+                            qm = relax + s_left.objectiveValue  # use a more reliable source to update q^-
                             half_solved = half_solved + 1
 
                         # right subproblem/up direction
                         s_right = CyClpSimplex(prob)
                         s_right += x[i] >= math.ceil(var_values[i])
-                        s_right.maxNumIteration = gamma
+                        s_right.maxNumIteration = gamma # solve for fixed number of iterations
                         s_right.dual()
                         if s_right.getStatusCode() == 0:
-                            qp = relax + s_right.objectiveValue   # delta^+
+                            qp = relax + s_right.objectiveValue   # use a more reliable source to update q^+
                             full_solved = full_solved + 1
-                            lp_count = lp_count + 1
+                            lp_count = lp_count + 1 # If the LP is fully solved, counter plus one
                         elif s_right.getStatusCode() == 3:
-                            qp = relax + s_right.objectiveValue
+                            qp = relax + s_right.objectiveValue # use a more reliable source to update q^+
                             half_solved = half_solved + 1
 
                         scores[i] = (1 - mu) * min(qm, qp) + mu * max(qm, qp)
@@ -482,8 +483,8 @@ def BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
 
                     if no_change >= lam:
                         break
-
                 branching_var = sorted(list(scores.items()), key=lambda x: x[1])[-1][0]
+                
             elif branch_strategy == HYBRID:
                 scores = {}
                 for i in range(len(VARIABLES)):
@@ -567,6 +568,7 @@ def BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
     if more_return:
         stat = {'Time': timer, 'Size': node_count, 'LP Solved': lp_count}
         if branch_strategy == RELIABILITY_BRANCHING:
+            stat['LP Solved for Bounds'] = lp_count - full_solved
             stat['Halfly Solved'] = half_solved
             stat['Fully Solved'] = full_solved
         return opt, LB, stat
