@@ -20,20 +20,39 @@ from cylp.cy.CyClpSimplex import CyClpSimplex
 from cylp.py.modeling.CyLPModel import CyLPModel, CyLPArray
 
 
+RELIABILITY_BRANCHING = 'Reliability Branching'
+
 def BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
                    branch_strategy=MOST_FRACTIONAL,
                    search_strategy=DEPTH_FIRST,
                    complete_enumeration=False,
                    display_interval=None,
                    binary_vars=True,
-                   solver='dynamic'
+                   solver='dynamic',
+                   rel_param = (4,10,1/6,5),
+                   more_return = False
                    ):
     """
         solver: 
             dynamic       - initialSolve
             primalSimplex - initialPrimalSolve 
             dualSimplex   - initialDualSolve
+            
+        rel_param = (eta_rel,gamma,mu,lambda):
+            eta_rel = 0       - psesudocost branching
+            eta_rel = 1       - psesudocost branching with strong branching initialization
+            eta_rel = 4,8     - best performing branching rules
+            eta_rel = inifity - strong branching
+            gamma             - max number of iterations in score calculation
+            mu                - score factor, a number between 0 and 1. Paper uses 1/6
+            lambda            - if max score is not updated for lambda 
+                                consecutive iteration, return the index of this variable
+        more_return:
+            False - return maximizer and max 
+            True  - also return a dict of stats(time, tree size, LP solved)
     """
+    # reliability branching parameters
+    eta_rel,gamma,mu,lam = rel_param
     # translate problems into cylp format
     cyOBJ = CyLPArray([-val for val in OBJ.values()])
     cyMAT = np.matrix([MAT[v] for v in VARIABLES]).T
@@ -76,12 +95,13 @@ def BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
     node_count = 1
     iter_count = 0
     lp_count = 0
-
+    
     numVars = len(VARIABLES)
     # List of incumbent solution variable values
     opt = dict([(i, 0) for i in range(len(VARIABLES))])
     pseudo_u = dict((i, (-OBJ[i], 0)) for i in range(len(VARIABLES)))
     pseudo_d = dict((i, (-OBJ[i], 0)) for i in range(len(VARIABLES)))
+    
     print("===========================================")
     print("Starting Branch and Bound")
     if branch_strategy == MOST_FRACTIONAL:
@@ -90,12 +110,16 @@ def BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
         print("Fixed order")
     elif branch_strategy == PSEUDOCOST_BRANCHING:
         print("Pseudocost brancing")
+    elif branch_strategy == RELIABILITY_BRANCHING:
+        print("Reliability branching")
     else:
         print("Unknown branching strategy %s" % branch_strategy)
     if search_strategy == DEPTH_FIRST:
         print("Depth first search strategy")
     elif search_strategy == BEST_FIRST:
         print("Best first search strategy")
+    elif search_strategy == BEST_ESTIMATE:
+        print("Best estimate search strategy")
     else:
         print("Unknown search strategy %s" % search_strategy)
     print("===========================================")
@@ -138,7 +162,7 @@ def BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
             prob += 0 <= x <= 1
         else:
             x = prob.addVariable('x', dim=len(VARIABLES))
-            prob += 0 <= x  # To avoid random generated problems be unbounded
+            # prob += 0 <= x  # To avoid random generated problems be unbounded
         prob.objective = OBJ * x
         prob += MAT * x <= RHS
         # Fix all prescribed variables
@@ -186,7 +210,8 @@ def BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
         if infeasible:
             print("LP Solved, status: Infeasible")
         else:
-            print("LP Solved, status: %s, obj: %s" % (s.getStatusString(), s.objectiveValue))
+            print("LP Solved, status: %s, obj: %s" % (s.getStatusString(), 
+                                                      s.objectiveValue))
         if(s.getStatusCode() == 0):
             relax = -s.objectiveValue
             # Update pseudocost
@@ -195,15 +220,18 @@ def BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
                     pseudo_d[branch_var] = (
                         old_div((pseudo_d[branch_var][0] * pseudo_d[branch_var][1] +
                                  old_div((T.get_node_attr(parent, 'obj') - relax),
-                                         (branch_var_value - rhs))), (pseudo_d[branch_var][1] + 1)),
+                                         (branch_var_value - rhs))), 
+                                (pseudo_d[branch_var][1] + 1)),
                         pseudo_d[branch_var][1] + 1)
                 else:
                     pseudo_u[branch_var] = (
                         old_div((pseudo_u[branch_var][0] * pseudo_d[branch_var][1] +
                                  old_div((T.get_node_attr(parent, 'obj') - relax),
-                                         (rhs - branch_var_value))), (pseudo_u[branch_var][1] + 1)),
+                                         (rhs - branch_var_value))), 
+                                (pseudo_u[branch_var][1] + 1)),
                         pseudo_u[branch_var][1] + 1)
-            var_values = dict([(i, s.primalVariableSolution['x'][i]) for i in range(len(VARIABLES))])
+            var_values = dict([(i, s.primalVariableSolution['x'][i]) 
+                               for i in range(len(VARIABLES))])
             integer_solution = 1
             for i in range(len(VARIABLES)):
                 if (abs(round(var_values[i]) - var_values[i]) > .001):
@@ -292,11 +320,11 @@ def BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
                 T._incumbent_value = relax
                 T._incumbent_parent = -1
                 T._new_integer_solution = True
-#           #Currently broken
-#           if ETREE_INSTALLED and T.attr['display'] == 'svg':
-#               T.write_as_svg(filename = "node%d" % iter_count,
-#                                 nextfile = "node%d" % (iter_count + 1),
-#                                 highlight = cur_index)
+    #           #Currently broken
+    #           if ETREE_INSTALLED and T.attr['display'] == 'svg':
+    #               T.write_as_svg(filename = "node%d" % iter_count,
+    #                                 nextfile = "node%d" % (iter_count + 1),
+    #                                 highlight = cur_index)
         else:
             _direction = {'<=': 'L', '>=': 'R'}
             if status is 'infeasible':
@@ -328,11 +356,11 @@ def BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
                 T._incumbent_parent = parent
                 T._new_integer_solution = True
             # Currently Broken
-#           if ETREE_INSTALLED and T.attr['display'] == 'svg':
-#               T.write_as_svg(filename = "node%d" % iter_count,
-#                                 prevfile = "node%d" % (iter_count - 1),
-#                                 nextfile = "node%d" % (iter_count + 1),
-#                                 highlight = cur_index)
+    #           if ETREE_INSTALLED and T.attr['display'] == 'svg':
+    #               T.write_as_svg(filename = "node%d" % iter_count,
+    #                                 prevfile = "node%d" % (iter_count - 1),
+    #                                 nextfile = "node%d" % (iter_count + 1),
+    #                                 highlight = cur_index)
             if T.get_layout() == 'dot2tex':
                 _dot2tex_label = {'>=': ' \geq ', '<=': ' \leq '}
                 T.set_edge_attr(parent, cur_index, 'label',
@@ -369,12 +397,75 @@ def BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
                 scores = {}
                 for i in range(len(VARIABLES)):
                     # find the fractional solutions
-                    if (var_values[i] - math.floor(var_values[i])) != 0:
-                        scores[i] = min(pseudo_u[i][0] * (math.ceil(var_values[i]) - var_values[i]),
-                                        pseudo_d[i][0] * (var_values[i] - math.floor(var_values[i])))
-                    # sort the dictionary by value
-                branching_var = sorted(list(scores.items()),
-                                       key=lambda x: x[1])[-1][0]
+                    if abs(var_values[i] - math.floor(var_values[i])) > 1e-8:
+                        scores[i] = min(pseudo_u[i][0] * (math.ceil(var_values[i]) 
+                                                          - var_values[i]),
+                                        pseudo_d[i][0] * (var_values[i] 
+                                                          - math.floor(var_values[i])))
+                # sort the dictionary by value
+                branching_var = sorted(list(scores.items()),key=lambda x: x[1])[-1][0]
+                
+            elif branch_strategy == RELIABILITY_BRANCHING:
+                # Calculating Scores
+                # The algorithm in paper is different from the one in Grumpy
+                # I will try to use paper notations
+                scores = {}
+                for i in range(len(VARIABLES)):
+                    # find the fractional solutions
+                    if abs(var_values[i] - math.floor(var_values[i])) > 1e-8:
+                        qp = pseudo_u[i][0] * (math.ceil(var_values[i]) 
+                                               - var_values[i]) # q^+
+                        qm = pseudo_d[i][0] * (var_values[i] 
+                                               - math.floor(var_values[i])) # q^^-
+                        #scores[i] = (1-mu) * min(qm,qp) + mu * max(qm,qp)
+                        scores[i] = min(qm,qp)
+                # sort the dictionary by value
+                candidate_vars = [en[0] for en in sorted(list(scores.items()),key=lambda x: x[1],reverse=True)]
+                
+                no_change = 0
+                smax = scores[candidate_vars[0]]
+                for i in candidate_vars:
+                    if min(pseudo_d[i][1],pseudo_u[i][1]) < eta_rel:
+                        qp = pseudo_u[i][0] * (math.ceil(var_values[i]) - var_values[i]) # q^+
+                        qm = pseudo_d[i][0] * (var_values[i] - math.floor(var_values[i])) # q^^-
+                        
+                        # left subproblem/down direction
+                        s_left = CyClpSimplex(prob)
+                        s_left +=  x[i] <= math.floor(var_values[i])
+                        s_left.maxNumIteration = gamma
+                        s_left.dual()
+                        if s_left.getStatusCode() == 0:
+                            left_var_values = dict([(i, s_left.primalVariableSolution['x'][i]) 
+                                                    for i in range(len(VARIABLES))])
+                            qm = -s_left.objectiveValue - relax # delta^-
+
+                        
+                        # right subproblem/up direction
+                        s_right = CyClpSimplex(prob)
+                        s_right +=  x[i] >= math.ceil(var_values[i])
+                        s_right.maxNumIteration = gamma
+                        s_right.dual()
+                        if s_right.getStatusCode() == 0:
+                            right_var_values = dict([(i, s_right.primalVariableSolution['x'][i]) 
+                                                     for i in range(len(VARIABLES))])
+                            qp = -s_right.objectiveValue - relax # delta^+
+
+                            
+                        scores[i]  = (1-mu) * min(qm,qp) + mu * max(qm,qp)
+                        if (smax == scores[i]):
+                            no_change += 1
+                        elif (smax <= scores[i]):
+                            no_change = 0
+                            smax =  scores[i]
+                        else:
+                            no_change = 0
+    
+                    if no_change >= lam:
+                        break
+                        
+                branching_var = sorted(list(scores.items()),key=lambda x: x[1])[-1][0]
+                            
+
             else:
                 print("Unknown branching strategy %s" % branch_strategy)
                 exit()
@@ -387,11 +478,9 @@ def BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
                 priority = (-relax, -relax)
             elif search_strategy == BEST_ESTIMATE:
                 priority = (-relax - pseudo_d[branching_var][0] *
-                            (math.floor(var_values[branching_var]) -
-                             var_values[branching_var]),
+                            (math.floor(var_values[branching_var]) - var_values[branching_var]),
                             -relax + pseudo_u[branching_var][0] *
-                            (math.ceil(var_values[branching_var]) -
-                             var_values[branching_var]))
+                            (math.ceil(var_values[branching_var]) - var_values[branching_var]))
             node_count += 1
             Q.push(node_count, priority[0], (node_count, cur_index, relax, branching_var,
                                              var_values[branching_var],
@@ -404,7 +493,7 @@ def BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
         if T.root is not None and display_interval is not None and\
                 iter_count % display_interval == 0:
             T.display(count=iter_count)
-
+    
     timer = int(math.ceil((time.time() - timer) * 1000))
     print("")
     print("===========================================")
@@ -426,6 +515,11 @@ def BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
     if T.attr['display'] is not 'off':
         T.display(count=iter_count)
     T._lp_count = lp_count
+    
+    if more_return:
+        stat = {'Time':timer, 'Size': node_count, 'LP Solved': lp_count}
+        return opt,LB,stat
+    
     return opt, LB
 
 
