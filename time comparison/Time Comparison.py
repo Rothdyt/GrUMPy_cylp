@@ -1,17 +1,18 @@
 # -*- coding: utf-8 -*-
 """
-Created on Thu May 14 02:03:56 2020
+Created on Thu May 14 13:14:56 2020
 
 @author: Muqing Zheng
 """
 
 import numpy as np
-import math,sys,os
+import math,sys,os,time
 from random import seed
 from random import randint
 import matplotlib.pyplot as plt
 import pandas as pd
 
+import coinor.grumpy
 from coinor.grumpy import GenerateRandomMIP
 from coinor.grumpy import BBTree
 from coinor.grumpy import MOST_FRACTIONAL, FIXED_BRANCHING, PSEUDOCOST_BRANCHING
@@ -23,6 +24,7 @@ sys.path.append(project_dir)
 
 from src.cylpBranchAndBound import RELIABILITY_BRANCHING, HYBRID
 from src.cylpBranchAndBound import BranchAndBound
+
 
 # Disable
 def blockPrint():
@@ -46,7 +48,7 @@ def negIdentity(n):
     return m
 
 
-
+blockPrint()
 # input Parameters 
 M = 30  # Number of Problems
 seed(1020)
@@ -55,68 +57,67 @@ seed(1020)
 
 ##################################################
 #branch= [MOST_FRACTIONAL, FIXED_BRANCHING, PSEUDOCOST_BRANCHING,RELIABILITY_BRANCHING,HYBRID]
-branch= [PSEUDOCOST_BRANCHING,RELIABILITY_BRANCHING,HYBRID]
+package = ['GrUMPy','CyLP']
+branch= [PSEUDOCOST_BRANCHING]
 search = [DEPTH_FIRST, BEST_FIRST, BEST_ESTIMATE]
-prob_data = np.array([]) # Record type of problems
-costs_node = {i + ' - ' + j:np.array([]) for i in branch for j in search}
-costs_time = {i + ' - ' + j:np.array([]) for i in branch for j in search}
-costs_lp = {i + ' - ' + j:np.array([]) for i in branch for j in search}
+costs_time = {p + ' - '+ i + ' - ' + j:np.array([]) for p in package for i in branch for j in search}
+
 
 # Solve problems and record tree size of costs
 for k in range(M):
     # Problem Size will be random
-    numVars = randint(5,25)
-    numCons = randint(int(numVars/5),int(2 * numVars/3))
+    numVars = randint(10,40)
+    numCons = randint(int(numVars/4),int(2 * numVars/3))
     rand_seed = randint(1,2000)
     #prob_data = np.append(prob_data,(numVars,numCons,rand_seed))
-    CONSTRAINTS, VARIABLES, OBJ, MAT, RHS = GenerateRandomMIP(
-        numVars=numVars , numCons=numCons,rand_seed= rand_seed)
-    
-    I = identity(len(VARIABLES))
-    negI = negIdentity(len(VARIABLES))
-    RHS = RHS + [0]*len(VARIABLES) + [3]*len(VARIABLES)
-    for i in VARIABLES:
-        MAT[i] = MAT[i] + negI[int(i[1:])]
-        CONSTRAINTS.append('C'+str(len(CONSTRAINTS)))
-    for i in VARIABLES:
-        MAT[i] = MAT[i] + I[int(i[1:])]
-        CONSTRAINTS.append('C'+str(len(CONSTRAINTS)))
+    CONSTRAINTS, VARIABLES, OBJ, MAT, RHS = GenerateRandomMIP(numVars=numVars , numCons=numCons,rand_seed= rand_seed)
         
     for i in branch:
         for j in search:
             T = BBTree()
-            opt, LB,stat = BranchAndBound(
-                T, CONSTRAINTS, VARIABLES, OBJ,MAT, RHS,branch_strategy=i,search_strategy=j,
-                more_return = True,binary_vars = False)
+            start = time.time()
+            opt, LB = BranchAndBound(
+                T, CONSTRAINTS, VARIABLES, OBJ,MAT, RHS,branch_strategy=i,search_strategy=j)
+            end = time.time()
+            tol_time = end-start
             if LB>-INFINITY:
-                costs_node[i + ' - ' + j] = np.append(costs_node[i + ' - ' + j],int(stat['Size']))
-                costs_time[i + ' - ' + j] = np.append(costs_time[i + ' - ' + j],float(stat['Time']))
-                costs_lp[i + ' - ' + j] = np.append(costs_lp[i + ' - ' + j],int(stat['LP Solved']))
+                costs_time['CyLP' + ' - ' +  i + ' - ' + j] = np.append(costs_time['CyLP' + ' - ' +  i + ' - ' + j],tol_time)
             else:
-                costs_node[i + ' - ' + j] = np.append(costs_node[i + ' - ' + j],INFINITY)
-                costs_time[i + ' - ' + j] = np.append(costs_time[i + ' - ' + j],INFINITY)
-                costs_lp[i + ' - ' + j] = np.append(costs_lp[i + ' - ' + j],INFINITY)
+                costs_time['CyLP' + ' - ' +  i + ' - ' + j] = np.append(costs_time['CyLP' + ' - ' +  i + ' - ' + j],INFINITY)
+                
+            T = BBTree()
+            start2 = time.time()
+            opt2, LB2 = coinor.grumpy.BranchAndBound(
+                T, CONSTRAINTS, VARIABLES, OBJ,MAT, RHS,branch_strategy=i,search_strategy=j)
+            end2 = time.time()
+            tol_time2 = end2-start2
+            if LB>-INFINITY:
+                costs_time['GrUMPy' + ' - ' +  i + ' - ' + j] = np.append(costs_time['GrUMPy' + ' - ' +  i + ' - ' + j],tol_time2)
+            else:
+                costs_time['GrUMPy' + ' - ' +  i + ' - ' + j] = np.append(costs_time['GrUMPy' + ' - ' +  i + ' - ' + j],INFINITY)
                 
                 
 def performance_profile(costs,name):
     # Do some computations
     # Calculate Minimum Cost of Each Problem
     min_costs = np.ones(M)*math.inf
-    for i in branch:
-        for j in search:
-            for k in range(M):
-                 if costs[i + ' - ' + j][k]<min_costs[k]:
-                    min_costs[k] = costs[i + ' - ' + j][k]
+    for p in package:
+        for i in branch:
+            for j in search:
+                for k in range(M):
+                     if costs[p + ' - '+ i + ' - ' + j][k]<min_costs[k]:
+                        min_costs[k] = costs[p + ' - '+ i + ' - ' + j][k]
 
     # Calculate Ratio of Each Problem  with Each Method              
     ratios = costs
-    for i in branch:
-        for j in search:
-            for k in range(M):
-                ratios[i + ' - ' + j][k] = costs[i + ' - ' + j][k]/min_costs[k]
+    for p in package:
+        for i in branch:
+            for j in search:
+                for k in range(M):
+                    ratios[p + ' - '+ i + ' - ' + j][k] = costs[p + ' - '+ i + ' - ' + j][k]/min_costs[k]
 
     # Efficients
-    effs = np.zeros(len(branch) * len(search))
+    effs = np.zeros(len(package)*len(branch) * len(search))
     ind = 0
     for rk in ratios.keys():
         effs[ind] = np.sum(ratios[rk]<=1)/M
@@ -128,7 +129,7 @@ def performance_profile(costs,name):
         if np.max(ratios[rk]) >rmax:
             rmax = np.max(ratios[rk])
 
-    robs = np.zeros(len(branch) * len(search))
+    robs = np.zeros(len(package)*len(branch) * len(search))
     ind = 0
     for rk in ratios.keys():
         robs[ind] = np.sum(ratios[rk]<=rmax)/M
@@ -157,14 +158,9 @@ def performance_profile(costs,name):
     # plt.show()
     
     for i in branch:
-        count = 0
         for rk in ratios.keys():
             if i in rk:
-                if count == 0:
-                    plt.plot(t,[np.sum(ratios[rk]<=t[i])/M for i in range(len(t)) ],'*-',label = rk)
-                    count += 1
-                else:
-                    plt.plot(t,[np.sum(ratios[rk]<=t[i])/M for i in range(len(t)) ],label = rk)
+                plt.plot(t,[np.sum(ratios[rk]<=t[i])/M for i in range(len(t)) ],label = rk)
         plt.xlabel('Performance Ratio')
         plt.ylabel('Percents of Problem Solved')
         plt.legend( loc='lower right')
@@ -172,14 +168,9 @@ def performance_profile(costs,name):
         plt.show()
 
     for j in search:
-        count = 0
         for rk in ratios.keys():
             if j in rk:
-                if count == 0:
-                    plt.plot(t,[np.sum(ratios[rk]<=t[i])/M for i in range(len(t)) ],'*-',label = rk)
-                    count += 1
-                else:
-                    plt.plot(t,[np.sum(ratios[rk]<=t[i])/M for i in range(len(t)) ],label = rk)
+                plt.plot(t,[np.sum(ratios[rk]<=t[i])/M for i in range(len(t)) ],label = rk)
         plt.xlabel('Performance Ratio')
         plt.ylabel('Percents of Problem Solved')
         plt.legend(loc='lower right')
@@ -190,6 +181,5 @@ def performance_profile(costs,name):
         
 if __name__ == '__main__':
     enablePrint()
-    performance_profile(costs_node, 'Tree Size')
-    performance_profile(costs_time, 'Solution Time')
-    performance_profile(costs_lp, 'LP Solved')
+    performance_profile(costs_time, 'Pack Time')
+
