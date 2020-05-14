@@ -417,8 +417,8 @@ def BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
                                                - var_values[i]) # q^+
                         qm = pseudo_d[i][0] * (var_values[i] 
                                                - math.floor(var_values[i])) # q^^-
-                        #scores[i] = (1-mu) * min(qm,qp) + mu * max(qm,qp)
-                        scores[i] = min(qm,qp)
+                        scores[i] = (1-mu) * min(qm,qp) + mu * max(qm,qp)
+                        #scores[i] = min(qm,qp)
                 # sort the dictionary by value
                 candidate_vars = [en[0] for en in sorted(list(scores.items()),key=lambda x: x[1],reverse=True)]
                 
