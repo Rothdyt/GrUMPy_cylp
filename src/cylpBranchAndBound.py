@@ -31,7 +31,7 @@ def BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
                    display_interval=None,
                    binary_vars=True,
                    solver='dynamic',
-                   rel_param=(4, 10, 1 / 6, 5),
+                   rel_param=(4, 3, 1 / 6, 5),
                    more_return=False
                    ):
     """
