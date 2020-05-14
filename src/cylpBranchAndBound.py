@@ -2,7 +2,7 @@
 File: cylpBranchAndBound.py
 Author: Yutong Dai and Muqing Zheng
 File Created: 2020-05-12 23:40
-Last Modified: 2020-05-13 23:44
+Last Modified: 2020-05-14 01:33
 --------------------------------------------
 Description:
 Modified based on coinor.grumpy
@@ -100,11 +100,11 @@ def BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
     # The number of LP's solved, and the number of nodes solved
     node_count = 1
     iter_count = 0
-    lp_count = 0 # The problems that are fully solved during 
-                 # Reliability and Hybrid branching is also couned here
+    lp_count = 0  # The problems that are fully solved during
+    # Reliability and Hybrid branching is also couned here
     # For reliability branching
-    half_solved = 0 # record number problems been halfly solved when calculate scores
-    full_solved = 0 # record number problems been fully solved when calculate scores
+    half_solved = 0  # record number problems been halfly solved when calculate scores
+    full_solved = 0  # record number problems been fully solved when calculate scores
 
     numVars = len(VARIABLES)
     # List of incumbent solution variable values
@@ -435,12 +435,12 @@ def BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
                         qm = pseudo_d[i][0] * (var_values[i]
                                                - math.floor(var_values[i]))  # q^^-
                         scores[i] = (1 - mu) * min(qm, qp) + mu * max(qm, qp)
-               
+
                 # sort the dictionary by value
                 candidate_vars = [en[0] for en in sorted(list(scores.items()), key=lambda x: x[1], reverse=True)]
 
-                no_change = 0 # number of iterations that maximum of scores is not changed
-                smax = scores[candidate_vars[0]] # current maximum of scores
+                no_change = 0  # number of iterations that maximum of scores is not changed
+                smax = scores[candidate_vars[0]]  # current maximum of scores
                 for i in candidate_vars:
                     if min(pseudo_d[i][1], pseudo_u[i][1]) < eta_rel:
                         qp = pseudo_u[i][0] * (math.ceil(var_values[i]) - var_values[i])  # q^+
@@ -449,12 +449,12 @@ def BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
                         # left subproblem/down direction
                         s_left = CyClpSimplex(prob)
                         s_left += x[i] <= math.floor(var_values[i])
-                        s_left.maxNumIteration = gamma # solve for fixed number of iterations
+                        s_left.maxNumIteration = gamma  # solve for fixed number of iterations
                         s_left.dual()
                         if s_left.getStatusCode() == 0:
                             qm = relax + s_left.objectiveValue  # use a more reliable source to update q^-
                             full_solved = full_solved + 1
-                            lp_count = lp_count + 1 # If the LP is fully solved, counter plus one
+                            lp_count = lp_count + 1  # If the LP is fully solved, counter plus one
                         elif s_left.getStatusCode() == 3:
                             qm = relax + s_left.objectiveValue  # use a more reliable source to update q^-
                             half_solved = half_solved + 1
@@ -462,14 +462,14 @@ def BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
                         # right subproblem/up direction
                         s_right = CyClpSimplex(prob)
                         s_right += x[i] >= math.ceil(var_values[i])
-                        s_right.maxNumIteration = gamma # solve for fixed number of iterations
+                        s_right.maxNumIteration = gamma  # solve for fixed number of iterations
                         s_right.dual()
                         if s_right.getStatusCode() == 0:
                             qp = relax + s_right.objectiveValue   # use a more reliable source to update q^+
                             full_solved = full_solved + 1
-                            lp_count = lp_count + 1 # If the LP is fully solved, counter plus one
+                            lp_count = lp_count + 1  # If the LP is fully solved, counter plus one
                         elif s_right.getStatusCode() == 3:
-                            qp = relax + s_right.objectiveValue # use a more reliable source to update q^+
+                            qp = relax + s_right.objectiveValue  # use a more reliable source to update q^+
                             half_solved = half_solved + 1
 
                         scores[i] = (1 - mu) * min(qm, qp) + mu * max(qm, qp)
@@ -484,7 +484,7 @@ def BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
                     if no_change >= lam:
                         break
                 branching_var = sorted(list(scores.items()), key=lambda x: x[1])[-1][0]
-                
+
             elif branch_strategy == HYBRID:
                 scores = {}
                 for i in range(len(VARIABLES)):
@@ -580,13 +580,13 @@ if __name__ == '__main__':
     from generator import GenerateRandomMIP
     T = BBTree()
     T.set_display_mode('xdot')
-    CONSTRAINTS, VARIABLES, OBJ, MAT, RHS = GenerateRandomMIP(numVars=20, numCons=15, rand_seed=10, density=0.2)
+    CONSTRAINTS, VARIABLES, OBJ, MAT, RHS = GenerateRandomMIP(numVars=30, numCons=20, rand_seed=418, density=0.3)
     _, _, stat1 = BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
-                                 branch_strategy=HYBRID,
+                                 branch_strategy=RELIABILITY_BRANCHING,
                                  search_strategy=DEPTH_FIRST,
                                  display_interval=10000,
                                  solver='primalSimplex',
-                                 binary_vars=False,
+                                 binary_vars=True,
                                  more_return=True
                                  )
     T = BBTree()
@@ -596,10 +596,10 @@ if __name__ == '__main__':
                                  search_strategy=DEPTH_FIRST,
                                  display_interval=10000,
                                  solver='primalSimplex',
-                                 binary_vars=False,
+                                 binary_vars=True,
                                  more_return=True
                                  )
-    print(HYBRID)
+    print(RELIABILITY_BRANCHING)
     print(stat1)
     print(PSEUDOCOST_BRANCHING)
     print(stat2)
