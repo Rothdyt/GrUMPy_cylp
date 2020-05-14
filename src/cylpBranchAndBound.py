@@ -230,7 +230,7 @@ def BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
             print("LP Solved, status: %s, obj: %s" % (s.getStatusString(),
                                                       s.objectiveValue))
         if(s.getStatusCode() == 0):
-            relax = -s.objectiveValue
+            relax = -round(s.objectiveValue,7)
             # Update pseudocost
             if branch_var != None:
                 if sense == '<=':
@@ -247,7 +247,7 @@ def BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
                                          (rhs - branch_var_value))),
                                 (pseudo_u[branch_var][1] + 1)),
                         pseudo_u[branch_var][1] + 1)
-            var_values = dict([(i, s.primalVariableSolution['x'][i])
+            var_values = dict([(i, round(s.primalVariableSolution['x'][i],7))
                                for i in range(len(VARIABLES))])
             integer_solution = 1
             for i in range(len(VARIABLES)):
