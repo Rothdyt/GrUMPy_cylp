@@ -99,7 +99,11 @@ def BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
     # The number of LP's solved, and the number of nodes solved
     node_count = 1
     iter_count = 0
-    lp_count = 0
+    lp_count = 0 # The problems that are fully solved during 
+                 # Reliability and Hybrid branching is also couned here
+    # For reliability branching
+    half_solved = 0 # record number problems been halfly solved when calculate scores
+    full_solved = 0 # record number problems been fully solved when calculate scores
 
     numVars = len(VARIABLES)
     # List of incumbent solution variable values
@@ -173,7 +177,6 @@ def BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
             prob += 0 <= x <= 1
         else:
             x = prob.addVariable('x', dim=len(VARIABLES))
-            prob += 0 <= x  # To avoid random generated problems be unbounded
         prob.objective = OBJ * x
         prob += MAT * x <= RHS
         # Fix all prescribed variables
@@ -448,7 +451,12 @@ def BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
                         s_left.maxNumIteration = gamma
                         s_left.dual()
                         if s_left.getStatusCode() == 0:
-                            qm = relax - (-s_left.objectiveValue)  # delta^-
+                            qm = relax + s_left.objectiveValue  # delta^-
+                            full_solved = full_solved + 1
+                            lp_count = lp_count + 1
+                        elif s_left.getStatusCode() == 3:
+                            qm = relax + s_left.objectiveValue  # delta^-
+                            half_solved = half_solved + 1
 
                         # right subproblem/up direction
                         s_right = CyClpSimplex(prob)
@@ -456,7 +464,12 @@ def BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
                         s_right.maxNumIteration = gamma
                         s_right.dual()
                         if s_right.getStatusCode() == 0:
-                            qp = relax - (-s_right.objectiveValue)   # delta^+
+                            qp = relax + s_right.objectiveValue   # delta^+
+                            full_solved = full_solved + 1
+                            lp_count = lp_count + 1
+                        elif s_right.getStatusCode() == 3:
+                            qp = relax + s_right.objectiveValue
+                            half_solved = half_solved + 1
 
                         scores[i] = (1 - mu) * min(qm, qp) + mu * max(qm, qp)
                         if (smax == scores[i]):
@@ -553,9 +566,10 @@ def BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
 
     if more_return:
         stat = {'Time': timer, 'Size': node_count, 'LP Solved': lp_count}
+        if branch_strategy == RELIABILITY_BRANCHING:
+            stat['Halfly Solved'] = half_solved
+            stat['Fully Solved'] = full_solved
         return opt, LB, stat
-
-    return opt, LB
 
 
 if __name__ == '__main__':
