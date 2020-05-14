@@ -2,7 +2,7 @@
 File: cylpBranchAndBound.py
 Author: Yutong Dai and Muqing Zheng
 File Created: 2020-05-12 23:40
-Last Modified: 2020-05-13 22:37
+Last Modified: 2020-05-13 22:49
 --------------------------------------------
 Description:
 Modified based on coinor.grumpy
@@ -485,6 +485,7 @@ def BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
                 print("Subset of candidate variables:")
                 print(restricted_candidate_vars)
                 best_progress = 0
+                branch_candidate = None
                 for i in restricted_candidate_vars:
                     s = CyClpSimplex(prob)
                     s += math.floor(var_values[i]) <= x[i] <= math.ceil(var_values[i])
@@ -493,10 +494,12 @@ def BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
                     if s.getStatusCode() == 0:
                         lp_count += 1
                     progress = relax - (-s.objectiveValue)
-                    if progress > best_progress:
-                        branch_var = i
+                    if (progress - best_progress) > 1e-8:
+                        branch_candidate = i
                         best_progress = progress
-                branching_var = branch_var
+                if branch_candidate is None:
+                    branch_candidate = restricted_candidate_vars[0]
+                branching_var = branch_candidate
 
             else:
                 print("Unknown branching strategy %s" % branch_strategy)
@@ -559,7 +562,7 @@ if __name__ == '__main__':
     from generator import GenerateRandomMIP
     T = BBTree()
     T.set_display_mode('xdot')
-    CONSTRAINTS, VARIABLES, OBJ, MAT, RHS = GenerateRandomMIP(numVars=30, numCons=20, rand_seed=100, density=0.2)
+    CONSTRAINTS, VARIABLES, OBJ, MAT, RHS = GenerateRandomMIP(numVars=40, numCons=20, rand_seed=100, density=0.2)
     BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
                    branch_strategy=HYBRID,
                    search_strategy=BEST_FIRST,
