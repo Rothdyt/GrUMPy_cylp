@@ -64,9 +64,13 @@ python src/cylpBranchAndBound
 
 
 Branch strategy can be chosen from `MOST_FRACTIONAL`, `FIXED_BRANCHING`, `PSEUDOCOST_BRANCHING`, `RELIABILITY_BRANCHING`, `RELIABILITY_BRANCHING`, and `HYBRID`.
+
 Search strategy can be chosen from `DEPTH_FIRST`, `BEST_FIRST`, and `BEST_ESTIMATE`, `RELIABILITY_BRANCHING`, and `RELIABILITY_BRANCHING`.
+
 Solver can be chosen from `dynamic`, which pick primal or dual simplex automatically, `primalSimplex`, and `dualSimplex`.
+
 `rel_param` are for reliability branching only, see comments in cylpBranchAndBound for detailed explanation on the choices of each values.
+
 If `more_return` is true, then function returns optimizer, optimal objetive values, and statistics that includes time(in ms) for branch and bound, number of nodes, and number LP solved;
 otherwise only returns optimizer and optimal objetive values.
 
