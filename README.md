@@ -41,7 +41,7 @@ opt2, LB2, stat2 = BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
 							 
 							 
 T = BBTree()
-opt3, LB3,, stat3 = BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
+opt3, LB3, stat3 = BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
                              branch_strategy=PSEUDOCOST_BRANCHING,
                              search_strategy=DEPTH_FIRST,
                              display_interval=10000,
