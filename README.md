@@ -2,6 +2,7 @@
 Make a `py` script, which contains following contents at the directory where `grumpy_cylp` is installed.
 ```python
 # cd location/of/the/grumpy_cylp/folder
+from coinor.grumpy import BBTree
 from src.cylpBranchAndBound import RELIABILITY_BRANCHING, HYBRID
 from src.cylpBranchAndBound import BranchAndBound
 from src.generator import GenerateRandomMIP
@@ -40,7 +41,7 @@ opt2, LB2, stat2 = BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
 							 
 							 
 T = BBTree()
-opt3, LB3,, stat3 = BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
+opt3, LB3, stat3 = BranchAndBound(T, CONSTRAINTS, VARIABLES, OBJ, MAT, RHS,
                              branch_strategy=PSEUDOCOST_BRANCHING,
                              search_strategy=DEPTH_FIRST,
                              display_interval=10000,
