@@ -2,6 +2,7 @@
 Make a `py` script, which contains following contents at the directory where `grumpy_cylp` is installed.
 ```python
 # cd location/of/the/grumpy_cylp/folder
+from coinor.grumpy import BBTree
 from src.cylpBranchAndBound import RELIABILITY_BRANCHING, HYBRID
 from src.cylpBranchAndBound import BranchAndBound
 from src.generator import GenerateRandomMIP
